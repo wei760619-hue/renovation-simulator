@@ -1,0 +1,2213 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>裝修模擬器</title>
+<meta name="author" content="格睿室內裝修">
+<meta name="copyright" content="© 格睿室內裝修 版權所有">
+<meta name="description" content="裝修模擬器：扮演室內裝修公司老闆，看懂施工圖、排好工序、選對材料，準時交屋！遊戲中所有金額皆為虛擬設定。">
+<meta property="og:title" content="裝修模擬器">
+<meta property="og:description" content="看懂施工圖、排好工序、準時交屋的室內裝修經營遊戲。">
+<meta name="theme-color" content="#141b1f">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔨%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#141b1f; --panel:#1f292e; --panel2:#29363c; --edge:#0b1013; --text:#eef2ef; --muted:#93a3a8;
+  --accent:#ff7a1a; --gold:#ffc94a; --good:#4cc38a; --bad:#ff5a4f; --blue:#58a6e0;
+  --card:#fff7e8; --cardInk:#1f2a2e;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:"Noto Sans TC",system-ui,sans-serif;color:var(--text);overflow-x:hidden;
+  background:
+    linear-gradient(rgba(88,166,224,.06) 1px,transparent 1px) 0 0/32px 32px,
+    linear-gradient(90deg,rgba(88,166,224,.06) 1px,transparent 1px) 0 0/32px 32px,
+    radial-gradient(ellipse at 50% 30%,#22313a 0%,var(--bg) 70%);
+  background-color:var(--bg);}
+button{font:inherit;cursor:pointer;color:inherit}
+.app{display:flex;flex-direction:column;min-height:100vh;max-width:1180px;margin:0 auto;padding:12px 14px 18px;gap:12px}
+
+/* HUD */
+.hud{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.level{display:flex;align-items:center;gap:10px;background:var(--panel);border:2px solid var(--edge);border-radius:14px;padding:6px 14px 6px 6px;box-shadow:0 4px 0 var(--edge)}
+.level .badge{width:44px;height:44px;border-radius:10px;background:linear-gradient(160deg,#ff9a3d,#e8590c);display:grid;place-items:center;font-weight:900;font-size:13px;line-height:1.05;text-align:center;color:#fff;border:2px solid #ffd0a8}
+.level b{display:block;font-size:15px;font-weight:900}
+.level small{color:var(--muted);font-size:11.5px}
+.res{flex:1 1 150px;display:flex;align-items:center;gap:10px;background:var(--panel);border:2px solid var(--edge);border-radius:14px;padding:6px 12px;box-shadow:0 4px 0 var(--edge);min-width:140px;position:relative}
+.res .ico{font-size:24px;width:36px;height:36px;display:grid;place-items:center;background:var(--panel2);border-radius:10px;flex:none}
+.res .lab{font-size:11px;color:var(--muted);letter-spacing:.05em}
+.res .val{font-size:18px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.15}
+.res .sub{font-size:10.5px;color:var(--muted)}
+.res .meter{height:7px;background:#0e1417;border-radius:4px;margin-top:4px;overflow:hidden;width:100%}
+.res .meter i{display:block;height:100%;border-radius:4px;transition:width .6s ease,background .3s}
+.res .grow{flex:1;min-width:0}
+.res.warn .val{color:var(--bad)}
+.res.pulse{animation:pulse .5s}
+@keyframes pulse{50%{transform:scale(1.05)}}
+
+/* stage */
+.stage{position:relative;background:linear-gradient(180deg,#26333a,#1b252a);border:2px solid var(--edge);border-radius:18px;padding:14px;box-shadow:0 6px 0 var(--edge);overflow:hidden}
+.stage-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;position:relative;z-index:3}
+.ticker{display:flex;flex-direction:column;gap:3px;font-size:12px;max-width:62%}
+.ticker div{background:rgba(11,16,19,.65);border-left:3px solid var(--muted);padding:3px 8px;border-radius:4px}.ticker div.new{animation:slideIn .4s}
+.ticker div.bad{border-color:var(--bad)} .ticker div.good{border-color:var(--good)}
+.ticker div:nth-child(2){opacity:.75}.ticker div:nth-child(3){opacity:.5}
+.ticker em{font-style:normal;color:var(--gold);margin-right:5px;font-weight:700}
+@keyframes slideIn{from{transform:translateX(-14px);opacity:0}}
+.pill{background:var(--panel2);border:2px solid var(--edge);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:700;box-shadow:0 3px 0 var(--edge)}
+.pill.on{background:#3a4c55}
+.pill:active{transform:translateY(2px);box-shadow:0 1px 0 var(--edge)}
+.boardwrap{perspective:1500px;margin:6px auto 0;max-width:760px}
+.board{transform:rotateX(22deg) scale(.94);transform-origin:50% 60%;transition:transform .6s cubic-bezier(.3,1.3,.5,1);filter:drop-shadow(0 22px 18px rgba(0,0,0,.45))}
+.board.flat{transform:none}
+.board svg{width:100%;height:auto;display:block;border-radius:6px}
+.bob{animation:bob .5s ease-in-out infinite alternate;transform-box:fill-box}
+.bob.b2{animation-delay:.25s}
+@keyframes bob{to{transform:translateY(-6px)}}
+.dust{animation:dust 1s ease-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes dust{from{opacity:.7;transform:scale(.4)}to{opacity:0;transform:scale(1.6)}}
+
+/* build overlay */
+.build{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;background:rgba(11,16,19,.88);border:2px solid var(--accent);border-radius:16px;padding:16px 26px;text-align:center;min-width:250px;box-shadow:0 0 0 6px rgba(255,122,26,.18)}
+.build .bic{font-size:46px;animation:hammer .35s ease-in-out infinite alternate;display:inline-block}
+@keyframes hammer{from{transform:rotate(-14deg)}to{transform:rotate(14deg)}}
+.build .bt{font-weight:900;font-size:17px;margin:4px 0 8px}
+.build .pbar{height:12px;background:#0e1417;border-radius:6px;overflow:hidden;border:1px solid #39474e}
+.build .pbar i{display:block;height:100%;width:0;background:repeating-linear-gradient(45deg,var(--gold) 0 10px,var(--accent) 10px 20px)}
+.build .bd{font-size:13px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums}
+.hidden{display:none!important}
+
+/* floats */
+.floats{position:absolute;left:50%;top:14%;transform:translateX(-50%);z-index:6;pointer-events:none;display:flex;flex-direction:column;align-items:center}
+.float{font-weight:900;font-size:22px;text-shadow:0 2px 0 #000,0 0 10px rgba(0,0,0,.6);animation:floatUp 1.8s ease-out forwards;opacity:0;white-space:nowrap}
+.float.good{color:var(--good)} .float.bad{color:var(--bad)} .float.neu{color:var(--gold)}
+@keyframes floatUp{0%{opacity:0;transform:translateY(20px) scale(.7)}15%{opacity:1;transform:translateY(0) scale(1.1)}25%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-50px)}}
+
+/* master button */
+.master{position:absolute;right:14px;bottom:14px;z-index:4;display:flex;align-items:center;gap:8px;background:var(--panel);border:2px solid var(--edge);border-radius:999px;padding:4px 14px 4px 4px;box-shadow:0 4px 0 var(--edge);font-weight:700;font-size:13px}
+.master .av{width:40px;height:40px}
+.master:hover{background:var(--panel2)}
+
+/* tray */
+.tray{background:var(--panel);border:2px solid var(--edge);border-radius:18px;padding:12px 14px 6px;box-shadow:0 6px 0 var(--edge)}
+.track{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.track .lab{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.06em}
+.slots{display:flex;gap:4px;flex-wrap:wrap}
+.slot{width:30px;height:30px;border-radius:8px;background:#141c20;border:2px dashed #39474e;display:grid;place-items:center;font-size:15px}
+.slot.f{background:var(--panel2);border:2px solid var(--good)}.slot.new{animation:pop .45s}
+@keyframes pop{0%{transform:scale(.3)}70%{transform:scale(1.2)}}
+.hand{display:flex;gap:12px;overflow-x:auto;padding:16px 4px 12px;scroll-snap-type:x proximity}
+.hand::-webkit-scrollbar{height:8px}.hand::-webkit-scrollbar-thumb{background:#39474e;border-radius:4px}
+.gcard{flex:0 0 124px;height:176px;border-radius:14px;background:var(--card);color:var(--cardInk);border:3px solid var(--edge);box-shadow:0 6px 0 var(--edge);position:relative;padding:0;text-align:center;display:flex;flex-direction:column;align-items:center;transition:transform .18s,box-shadow .18s;scroll-snap-align:start;overflow:hidden}
+.gcard .band{width:100%;height:30px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;letter-spacing:.08em}
+.gcard .ic{font-size:36px;margin-top:6px;line-height:1.1}
+.gcard .nm{font-weight:900;font-size:15px;margin-top:2px;padding:0 6px;line-height:1.25}
+.gcard .ds{font-size:10.5px;color:#6b6a64;padding:2px 8px;line-height:1.35;flex:1;overflow:hidden}
+.gcard .ft{display:flex;width:100%;border-top:2px dashed #e0d4bd;font-size:11.5px;font-weight:700}
+.gcard .ft span{flex:1;padding:5px 0}
+.gcard .ft span+span{border-left:2px dashed #e0d4bd}
+.gcard.ok{cursor:pointer}
+.gcard.ok:hover{transform:translateY(-12px) rotate(-1.5deg);box-shadow:0 14px 0 var(--edge),0 0 0 3px var(--gold)}
+.gcard.ok::after{content:"開工";position:absolute;top:36px;right:-30px;transform:rotate(35deg);background:var(--accent);color:#fff;font-size:10px;font-weight:900;padding:2px 30px}
+.gcard.lock{filter:grayscale(1) brightness(.55);cursor:not-allowed}
+.gcard .lockmsg{position:absolute;left:0;right:0;bottom:30px;font-size:11px;font-weight:700;background:rgba(31,42,46,.92);color:#fff;padding:5px 6px;line-height:1.3}
+.gcard.optional .band::after{content:" ・可略過";font-weight:500}
+.gcard.playing{animation:play .45s forwards}
+@keyframes play{to{transform:translateY(-140px) scale(.6);opacity:0}}
+.wallbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 4px}
+.wallbar .t{flex:1 1 280px;font-size:14px}
+.wallbar .t b{color:var(--gold)}
+.btn{border:2px solid var(--edge);background:var(--accent);color:#fff;border-radius:12px;padding:10px 18px;font-weight:900;box-shadow:0 4px 0 #8a3305}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #8a3305}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.sec{background:var(--panel2);box-shadow:0 4px 0 var(--edge)}
+
+.dwg-dim{position:fixed;inset:0;z-index:25;background:rgba(5,8,10,.72);display:flex;align-items:center;justify-content:center;padding:12px;animation:fade .2s}
+.dwg{width:100%;max-width:960px;max-height:95vh;display:flex;flex-direction:column;background:#0b2238;border:3px solid var(--edge);border-radius:16px;box-shadow:0 10px 0 var(--edge);overflow:hidden;animation:unroll .35s cubic-bezier(.3,1.3,.5,1);transform-origin:top}
+@keyframes unroll{from{transform:scaleY(.15);opacity:0}}
+.dwg-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;gap:10px}
+.dwg-head b{font-size:16px}
+.dwg-head .btn{padding:6px 14px;font-size:13px}
+.dwg-tabs{display:flex;gap:6px;padding:0 12px;overflow-x:auto;flex:none}
+.dwg-tab{flex:none;border:2px solid #1d4a6e;border-bottom:none;background:#123a5c;color:#bcd6ea;border-radius:10px 10px 0 0;padding:5px 14px 6px;font-size:13px;font-weight:700;text-align:left}
+.dwg-tab small{display:block;font-size:10px;color:#7fb0d6;font-weight:500}
+.dwg-tab.on{background:#174a73;color:#fff;border-color:#5fa4d6}
+.dwg-body{flex:1;overflow:auto;background:#174a73;border-top:2px solid #5fa4d6}
+.dwg-body svg{width:100%;height:auto;display:block}
+.notes-sheet{color:#e8f1f8;padding:18px 26px;font-size:15.5px;line-height:1.9}
+.notes-sheet h3{margin:0 0 6px;color:#fff}.notes-sheet b{color:#ffd56b}
+.pill.dwgbtn{background:var(--accent);color:#fff;box-shadow:0 3px 0 #8a3305;border-color:var(--edge)}
+.topbtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+/* VN dialog */
+.dim{position:fixed;inset:0;background:rgba(5,8,10,.55);z-index:20;display:flex;align-items:flex-end;justify-content:center;padding:16px;animation:fade .25s}
+@keyframes fade{from{opacity:0}}
+.vn{position:relative;width:100%;max-width:780px;background:linear-gradient(180deg,#24323a,#1a2328);border:3px solid var(--edge);border-radius:18px;box-shadow:0 8px 0 var(--edge),0 0 0 2px #3c4e57 inset;padding:20px 22px 18px 150px;margin-bottom:10px;animation:rise .35s cubic-bezier(.3,1.4,.5,1);max-height:88vh;overflow:auto}
+.vn.bad{box-shadow:0 8px 0 var(--edge),0 0 0 2px var(--bad) inset}
+@keyframes rise{from{transform:translateY(40px);opacity:0}}
+.portrait{position:absolute;left:18px;top:18px;width:112px;height:112px;border-radius:50%;border:4px solid var(--edge);box-shadow:0 0 0 3px #3c4e57;overflow:hidden;background:#fff}
+.nametag{display:inline-block;background:var(--accent);color:#fff;font-weight:900;font-size:13px;padding:3px 12px;border-radius:8px;margin-bottom:6px}
+.vn.bad .nametag{background:var(--bad)}
+.vn h3{margin:0 0 6px;font-size:19px;font-weight:900}
+.vn p{margin:0 0 8px;line-height:1.65;color:#dfe6e3}
+.vn .brief{background:rgba(0,0,0,.25);border:1px solid #3c4e57;border-radius:12px;padding:10px 14px;margin:8px 0}
+.vn .brief ul{margin:4px 0 0;padding-left:18px}.vn .brief li{margin:2px 0;font-size:14px}
+.vn .brief b{color:var(--gold)}
+.opts{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.opt{text-align:left;background:var(--panel2);border:2px solid var(--edge);border-radius:12px;padding:9px 14px;box-shadow:0 4px 0 var(--edge);display:flex;align-items:center;gap:10px;transition:transform .12s}
+.opt::before{content:"▶";color:var(--accent);font-size:12px}
+.opt:hover{background:#344550;transform:translateX(4px)}
+.opt b{display:block;font-size:15px}
+.opt small{color:var(--muted);font-size:12px}
+@media(max-width:640px){
+  .vn{padding:76px 16px 16px}
+  .portrait{width:78px;height:78px;left:50%;top:-6px;transform:translate(-50%,0);position:absolute}
+  .vn{margin-top:50px;margin-bottom:24px;overflow:visible;max-height:none}
+  .dim{overflow-y:auto;align-items:flex-start;-webkit-overflow-scrolling:touch}
+  .board{transform:rotateX(14deg) scale(.97)}
+  .ticker{max-width:100%}
+  .master span{display:none}.master{padding:4px}
+  .res{flex:1 1 40%;min-width:0;padding:5px 8px;gap:7px}.res .ico{width:30px;height:30px;font-size:19px}.res .val{font-size:15px}.res .sub{display:none}
+  .level{flex:1 1 40%}.stage{padding:10px}
+}
+
+/* title & end screens */
+.screen{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:linear-gradient(rgba(88,166,224,.08) 1px,transparent 1px) 0 0/28px 28px,linear-gradient(90deg,rgba(88,166,224,.08) 1px,transparent 1px) 0 0/28px 28px,radial-gradient(circle at 50% 40%,#2a3d48,#0e1417 75%)}
+.title{text-align:center;animation:rise .6s}
+.title .kicker{color:var(--gold);font-weight:700;letter-spacing:.3em;font-size:13px}
+.title h1{font-size:clamp(44px,9vw,86px);margin:6px 0 0;font-weight:900;line-height:1.05;letter-spacing:.04em;color:#fff;text-shadow:0 5px 0 var(--accent),0 10px 0 var(--edge)}
+.title h2{font-size:clamp(18px,3.4vw,26px);margin:18px 0 28px;font-weight:700;color:#cfe0e8}
+.title .btn{font-size:20px;padding:14px 40px;animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(1.06)}}
+.title .tip{color:var(--muted);font-size:13px;margin-top:22px}
+.title .deco{font-size:42px;margin-bottom:6px;letter-spacing:12px}
+.result{background:linear-gradient(180deg,#24323a,#1a2328);border:3px solid var(--edge);border-radius:22px;box-shadow:0 10px 0 var(--edge);max-width:540px;width:100%;padding:24px;max-height:92vh;overflow:auto;animation:rise .5s;text-align:center}
+.stamp{width:140px;height:140px;margin:4px auto 6px;border-radius:50%;border:8px solid var(--accent);display:grid;place-items:center;font-size:84px;font-weight:900;color:var(--accent);transform:rotate(-12deg);animation:stamp .5s .2s cubic-bezier(.3,1.6,.5,1) both;background:rgba(255,122,26,.08)}
+.stamp.S{border-color:var(--gold);color:var(--gold)}
+@keyframes stamp{from{transform:scale(3) rotate(-30deg);opacity:0}}
+.result .msg{font-size:17px;font-weight:700;margin-bottom:14px}
+.rgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0 14px}
+.rgrid div{background:rgba(0,0,0,.25);border:1px solid #3c4e57;border-radius:12px;padding:8px 6px}
+.rgrid span{display:block;font-size:11.5px;color:var(--muted)}
+.rgrid b{font-size:18px;font-variant-numeric:tabular-nums}
+.issues{text-align:left;background:rgba(0,0,0,.25);border-radius:12px;padding:10px 14px 10px 30px;margin:0 0 12px;font-size:14px}
+.issues li{margin:3px 0}
+.seq{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-bottom:16px}
+.seq span{background:var(--panel2);border-radius:8px;padding:3px 8px;font-size:12px}
+.rbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* level select */
+.lvwrap{max-width:960px;width:100%;text-align:center;max-height:94vh;overflow:auto;padding:4px}
+.lvgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:18px}
+.lvcard{background:linear-gradient(180deg,#24323a,#1a2328);border:3px solid var(--edge);border-radius:18px;box-shadow:0 8px 0 var(--edge);padding:16px;text-align:left;transition:transform .15s;position:relative}
+.lvcard.ok:hover{transform:translateY(-6px);box-shadow:0 14px 0 var(--edge),0 0 0 3px var(--gold)}
+.lvcard .no{font-size:12px;font-weight:900;color:var(--gold);letter-spacing:.15em}
+.lvcard h3{margin:4px 0 2px;font-size:21px;font-weight:900}
+.lvcard .pl{font-size:12.5px;color:var(--muted)}
+.lvcard .tags{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.tag{font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--panel2)}
+.tag.hard{background:#6b2a22;color:#ffc2b8}
+.lvcard .stars{color:var(--gold);letter-spacing:3px;font-size:15px}
+.lvcard .best{position:absolute;right:14px;top:10px;font-weight:900;color:var(--accent);font-size:28px}
+.lvcard.lock{filter:grayscale(1);opacity:.5;cursor:not-allowed}
+.linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:12.5px;margin-top:20px}
+/* planner */
+.planner .ph{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-size:14px;margin:4px 0 8px}
+.planner .ph b{color:var(--gold)} .planner .est{color:var(--muted);font-size:13px}
+.sched{display:flex;flex-wrap:wrap;gap:6px;min-height:46px;background:#141c20;border:2px dashed #39474e;border-radius:12px;padding:8px;align-items:center}
+.sched .empty{color:var(--muted);font-size:13px;padding:0 6px}
+.chip{display:inline-flex;align-items:center;gap:5px;background:var(--card);color:var(--cardInk);border:2px solid var(--edge);border-radius:10px;padding:3px 5px 3px 3px;font-size:13px;font-weight:700;box-shadow:0 3px 0 var(--edge)}
+.chip .n{background:var(--accent);color:#fff;border-radius:6px;min-width:22px;text-align:center;font-size:12px;padding:1px 4px}
+.chip button{border:none;background:#e9dfcb;border-radius:5px;width:22px;height:22px;font-size:10px;padding:0;color:#1f2a2e}
+.chip button:hover:not(:disabled){background:var(--accent);color:#fff}
+.chip button:disabled{opacity:.3;cursor:default}
+.chip.done{opacity:.5;animation:none}.chip.done .n{background:var(--good)}
+.chip.cur{outline:3px solid var(--gold);animation:pulse 1s infinite}
+.hand.pool{padding-top:12px}
+.hand.pool .gcard{flex-basis:112px;height:162px}
+.hand.pool .gcard.ok::after{content:"＋排入"}
+.planfoot{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin:4px 0 8px}
+.planfoot .pl{font-size:13px;color:var(--muted)}
+
+/* ===== v2 additions ===== */
+.board{transform:none!important;filter:drop-shadow(0 18px 16px rgba(0,0,0,.4))}
+.boardwrap{max-width:900px}
+#cv3{width:100%;aspect-ratio:16/10;display:block;border-radius:10px;touch-action:none;cursor:grab}
+#cv3:active{cursor:grabbing}
+#b2d svg{width:100%;height:auto;display:block;border-radius:8px}
+.topbtns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:62%}
+.pill.workf{border-color:var(--accent)}
+.res.sound{flex:0 0 auto;min-width:0;font-size:22px;justify-content:center;cursor:pointer;padding:6px 14px}
+.crewchip{display:block;color:var(--gold)!important;font-weight:700}
+.disc{font-size:11.5px;color:var(--muted);line-height:1.6;margin:10px 0 0}
+.titledisc{max-width:520px;margin:28px auto 0;padding:10px 14px;border:1px solid #39474e;border-radius:10px;background:rgba(0,0,0,.25)}
+.clientinfo{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.clientinfo span{font-size:12px;background:rgba(255,255,255,.08);border-radius:999px;padding:2px 9px}
+.lvhead{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;text-align:left}
+.lvhead .kicker{color:var(--gold);font-weight:700;letter-spacing:.3em;font-size:13px}
+.cashline{font-size:15px;margin-top:4px}.cashline b{color:var(--gold)}
+.lvgrid{grid-template-columns:repeat(auto-fill,minmax(205px,1fr))!important}
+.lvcard h3{font-size:19px!important}
+.lvfoot{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+.shopgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:18px;text-align:left}
+.tool{background:linear-gradient(180deg,#24323a,#1a2328);border:3px solid var(--edge);border-radius:18px;box-shadow:0 8px 0 var(--edge);padding:14px;display:flex;flex-direction:column}
+.tool.own{box-shadow:0 8px 0 var(--edge),0 0 0 2px var(--good) inset}
+.tool .tic{font-size:40px}
+.tool h3{margin:4px 0;font-size:17px}
+.tool p{font-size:13px;color:#cfd8d6;flex:1;margin:0 0 10px;line-height:1.55}
+.tfoot{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tfoot b{color:var(--gold)}
+.ownb{color:var(--good);font-weight:700;font-size:13px}
+.rev{color:#ff9b8a;font-weight:700}
+.bd{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left;margin:0 0 12px}
+.bd>div{background:rgba(0,0,0,.25);border-radius:12px;padding:8px 12px}
+.bd h4{margin:0 0 4px;font-size:13px}
+.bd table{width:100%;font-size:12.5px;border-collapse:collapse}
+.bd td{padding:2px 0}.bd td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.bd tr.neg td{color:#ffb3ab}
+@media(max-width:560px){.bd{grid-template-columns:1fr}}
+.mechbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:8px 2px 0;font-size:13px}
+.mechbar .mtag{background:#3b2a5a;color:#e6d8ff;border-radius:999px;padding:3px 10px;font-weight:900}
+.mechbar .mst{color:#dfe6e3}
+.mechbar .btn{padding:6px 12px;font-size:13px}
+.mechbox{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(155,120,255,.15);border:1px solid rgba(155,120,255,.4);font-size:13.5px;line-height:1.6}
+.tag.mt{background:#3b2a5a;color:#e6d8ff}
+#furnBar{position:absolute;left:14px;right:14px;bottom:70px;z-index:4;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:rgba(11,16,19,.82);border:2px solid var(--gold);border-radius:14px;padding:8px 10px;font-size:13px}
+#furnBar span{flex:1 1 200px}
+#furnBar .pill:disabled{opacity:.4}
+.pill.exitbtn{background:#5a2420;color:#ffd2cc}
+.backhome{margin:0 0 6px!important;padding:0;font-size:13px!important}
+.copyright{margin-top:16px;font-size:13px;color:#cfd8d6;letter-spacing:.05em}.copyright b{color:var(--gold)}
+.schedhint{font-size:13px;color:var(--muted);margin:8px 2px 0}.schedhint b{color:var(--gold)}
+@media(max-width:640px){.topbtns{max-width:100%}.stage-top{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hud" id="hud"></div>
+  <div class="stage" id="stage">
+    <div class="stage-top">
+      <div class="ticker" id="ticker"></div>
+      <div class="topbtns" id="viewBtns"></div>
+    </div>
+    <div class="boardwrap"><div class="board" id="board"><div id="b2d"></div><div id="b3d"><canvas id="cv3"></canvas></div></div></div>
+    <div class="build hidden" id="build"><div class="bic" id="bic"></div><div class="bt" id="bt"></div><div class="pbar"><i id="pbar"></i></div><div class="bd" id="bd"></div></div>
+    <div class="floats" id="floats"></div>
+    <div id="furnBar" class="hidden"></div>
+    <button class="master" id="masterBtn"><span class="av" id="masterAv"></span><span id="masterLbl">問老師傅</span></button>
+  </div>
+  <div class="tray" id="tray"></div>
+</div>
+<div id="dwgRoot"></div><div id="dlgRoot"></div>
+<div id="screenRoot"></div>
+<script>
+/* =========================================================
+   資料：工項、規則、材料、工班、工具、格局、關卡、事件
+   ========================================================= */
+const DISCLAIMER = '本遊戲中所有報價、工程金額、材料價格、工資與工期皆為虛擬設定，僅供遊戲娛樂，不代表台灣實際市場行情。實際裝修費用請洽專業廠商現場丈量估價。';
+
+const TASKS = [
+  {id:'A', name:'保護工程', desc:'地面、電梯、公共走道鋪保護板', days:1, cost:8000, optional:true},
+  {id:'B', name:'拆除清運', desc:'照拆除平面圖標出要拆的東西，廢料清運', days:2, cost:38000, minigame:'demo'},
+  {id:'C', name:'水電配管', desc:'新房間插座迴路、天花板燈具線路', days:3, cost:55000, need:['B']},
+  {id:'D', name:'輕隔間骨架', desc:'照平面配置圖放樣、下 C 型鋼天地槽與立柱', days:1, cost:16000, need:['B'], minigame:'wall'},
+  {id:'E', name:'隔間封板', desc:'填隔音棉、兩面封板', days:2, need:['D'], choice:'E'},
+  {id:'F', name:'天花板骨架', desc:'吊筋、主副骨架', days:2, need:['B'], choice:'F'},
+  {id:'G', name:'天花板封板', desc:'封板、留維修孔', days:2, need:['F'], choice:'G'},
+  {id:'H', name:'批土油漆', desc:'接縫批土、研磨、上漆', days:3, need:['B'], choice:'H'},
+  {id:'I', name:'SPC 地板', desc:'居室鋪設 SPC 石塑地板', days:2, need:['B'], choice:'I'},
+  {id:'J', name:'燈具面板安裝', desc:'照天花板圖開孔裝崁燈、裝面板', days:1, cost:15000, need:['C','G'], minigame:'lights'},
+  {id:'W', name:'浴室翻修', desc:'浴室防水層、重貼磁磚', days:2, cost:48000, need:['C'], extra:true},
+  {id:'AC', name:'冷氣管線預埋', desc:'冷媒管、排水管先拉好', days:1, cost:22000, need:['B'], extra:true},
+  {id:'O', name:'木作窗簾盒', desc:'窗簾盒、天花板收邊木作', days:1, cost:18000, need:['F'], extra:true},
+  {id:'S', name:'系統櫃安裝', desc:'衣櫃、書櫃、電視櫃', days:1, cost:58000, need:['B'], extra:true},
+  {id:'M', name:'門框門片安裝', desc:'新房間門洞裝門框、門片、門鎖', days:1, need:['E'], choice:'M'},
+  {id:'N', name:'家具軟裝', desc:'家具進場、窗簾、地毯、燈飾擺設', days:1, need:['B'], choice:'N'},
+  {id:'K', name:'細清驗收', desc:'細部清潔、與業主驗收交屋', days:1, cost:6000, final:true},
+];
+const T = Object.fromEntries(TASKS.map(t=>[t.id,t]));
+const IDEAL = ['A','B','C','AC','W','D','E','F','O','G','H','I','S','M','J','N','K'];
+
+const STYLES = {
+  '北歐':{wood:'#d9b98c', fabric:'#c5cfd3', accent:'#6f9fb5', rug:'#e8e1d4', cost:68000, note:'淺木色、灰藍布沙發'},
+  '日式無印':{wood:'#e2c9a0', fabric:'#efe9df', accent:'#8a9a6b', rug:'#ddd4c2', cost:62000, note:'原木、米白、榻榻米感'},
+  '工業':{wood:'#6b5240', fabric:'#4a4f52', accent:'#c0563b', rug:'#3d4245', cost:72000, note:'深木、鐵件、皮革'},
+  '現代輕奢':{wood:'#3a3330', fabric:'#d8cfc4', accent:'#c9a33a', rug:'#cbbfb0', cost:98000, note:'大理石、金屬、絨布'},
+};
+const PAINTS = {'米白':'#f6f3ec','暖灰':'#cfc4b3','霧藍':'#a9c0cf','奶茶':'#d9c2a7'};
+
+const CHOICES = {
+  E:{text:()=>`隔間要用什麼封板？施工圖上寫${roomNames()}「要隔音」。`, opts:[
+    {key:'gyp', label:'石膏板＋隔音棉', cost:22000, note:'常見做法', apply:()=>{S.flags.sound=true}},
+    {key:'cal', label:'矽酸鈣板＋隔音棉', cost:28000, note:'較耐潮、耐撞', apply:()=>{S.flags.sound=true; q(2); sat(2)}},
+    {key:'none', label:'石膏板（不填隔音棉）', cost:15000, note:'省錢', apply:()=>{S.flags.sound=false}},
+  ]},
+  F:{text:()=>'天花板骨架怎麼分區施作？（對照 A-02 天花板配置圖：居室跟浴室／廁所可能做法不同）', opts:[
+    {key:'mix', label:'居室暗架平頂＋浴廁明架', cost:44000, days:2, note:'居室平整藏燈、浴廁方便維修', apply:()=>{S.ceil='flat'; S.wetCeil='grid'}},
+    {key:'grid', label:'全室明架（含浴廁）', cost:30000, days:1, note:'最省、看得到格線', apply:()=>{S.ceil='grid'; S.wetCeil='grid'}},
+    {key:'flat', label:'全室暗架（含浴廁）', cost:50000, days:2, note:'全部平頂', apply:()=>{S.ceil='flat'; S.wetCeil='flat'; S.flags.wetFlat=true}},
+  ]},
+  G:{text:()=>'天花板封板用什麼材料？注意：浴室會很潮濕。', opts:[
+    {key:'mix', label:'居室石膏板＋浴室矽酸鈣板', cost:36000, note:'分區用料'},
+    {key:'cal', label:'全室矽酸鈣板', cost:44000, note:'最耐潮', apply:()=>q(2)},
+    {key:'gyp', label:'全室石膏板', cost:30000, note:'最便宜', apply:()=>{S.flags.mold=true}},
+  ]},
+  H:{text:()=>'牆面要刷什麼顏色？（看一下施工說明）', opts:Object.entries(PAINTS).map(([n,hex],i)=>({key:n, label:n, cost:i?44000:42000, note:'兩底一面'}))},
+  I:{text:()=>L().needLevel?'準備鋪 SPC 地板，但這間地面有點高低不平。':'準備鋪 SPC 地板，這間地面看起來還算平整。', opts:[
+    {key:'level', label:'先做地面整平再鋪', cost:62000, days:3, note:'自平水泥＋SPC'},
+    {key:'direct', label:'直接鋪', cost:50000, days:2, note:'省一天', apply:()=>{S.flags.floorDirect=true}},
+  ]},
+  M:{text:()=>`${roomNames()}的門要裝哪一種？（看 A-01 平面圖的門備註，共 ${S.doors.length} 樘）`, opts:[
+    {key:'sound', label:'隔音門（實心門片＋門檻止風條）', cost:15000, note:'每樘'},
+    {key:'wood', label:'木心板貼皮門', cost:11000, note:'每樘，一般室內門'},
+    {key:'pvc', label:'塑鋼門', cost:7000, note:'每樘，最便宜，常用在浴室'},
+  ]},
+  N:{text:()=>'家具軟裝要配哪一種風格？（業主喜好寫在 G-00 施工說明）業主另外付軟裝費用，你可以賺一點價差。', opts:[
+    ...Object.entries(STYLES).map(([k,v])=>({key:k, label:`${k}風`, cost:v.cost, note:v.note})),
+    {key:'none', label:'不接軟裝，讓業主自己處理', cost:0, note:'不賺也不賠'},
+  ]},
+};
+
+// should 應該在 before 之前做；若 before 已完成才做 should → 返工
+const RULES = [
+  {should:'C', before:'E', cost:9000, days:1, q:8, msg:'隔間封好板才配管：得割開板材穿線再補板，多花 NT$9,000、1 天。'},
+  {should:'C', before:'F', cost:5000, days:1, q:3, msg:'天花板骨架吊好才配管：管線要繞過骨架重新固定，多花 NT$5,000、1 天。'},
+  {should:'C', before:'G', cost:16000, days:2, q:10, msg:'天花板封好才配管：拆板、拉線、再封板，多花 NT$16,000、2 天。'},
+  {should:'D', before:'F', cost:0, days:0, q:4, msg:'先做天花板才立隔間：隔間只能做到天花板下，上方沒封到樓板，聲音會從上面漏過去。', fx:()=>{S.flags.soundLeak=true}},
+  {should:'D', before:'I', cost:8000, days:1, q:6, msg:'先鋪地板才立隔間：天地槽不能鎖在浮貼的地板上，得局部拆地板重做，多花 NT$8,000、1 天。'},
+  {should:'E', before:'H', cost:12000, days:1, q:5, msg:'油漆刷完才封隔間：新板面要重新批土上漆，多花 NT$12,000、1 天。'},
+  {should:'G', before:'H', cost:15000, days:1, q:5, msg:'油漆刷完才封天花板：交接處要重新批土補漆，多花 NT$15,000、1 天。'},
+  {should:'H', before:'I', cost:6000, days:0, q:8, msg:'地板鋪好才油漆：漆點滴落，地板要全面保護與清潔，多花 NT$6,000。'},
+  {should:'E', before:'I', cost:5000, days:0, q:5, msg:'地板鋪好才封隔間板：搬板切割刮傷新地板，修補 NT$5,000。'},
+  {should:'G', before:'I', cost:5000, days:0, q:5, msg:'地板鋪好才封天花板：施工梯壓出痕跡，修補 NT$5,000。'},
+  {should:'H', before:'J', cost:3000, days:0, q:3, msg:'面板裝好才油漆：要拆下面板再刷，多花 NT$3,000。'},
+  {should:'H', before:'M', cost:4000, days:0, q:3, msg:'門裝好才油漆：門片要拆下來保護、門框要貼遮蔽，多花 NT$4,000。'},
+  {should:'I', before:'M', cost:3000, days:0, q:3, msg:'門裝好才鋪地板：門片下緣卡到地板，要拆下來裁短，多花 NT$3,000。'},
+  {should:'H', before:'N', cost:6000, days:0, q:5, msg:'家具進場才油漆：家具要全部搬開、包膜保護，多花 NT$6,000。'},
+  {should:'I', before:'N', cost:8000, days:1, q:5, msg:'家具進場才鋪地板：家具全部搬出搬進，多花 NT$8,000、1 天。'},
+  {should:'J', before:'N', cost:2000, days:0, q:2, msg:'家具進場才裝燈：架梯子要閃家具，多花 NT$2,000。'},
+  {should:'G', before:'N', cost:5000, days:0, q:4, msg:'家具進場才封天花板：粉塵落在家具上，要清潔，多花 NT$5,000。'},
+  {should:'W', before:'G', cost:8000, days:1, q:5, msg:'天花板封好才做浴室防水磁磚：水氣、粉塵弄髒新天花板，局部重做，多花 NT$8,000、1 天。'},
+  {should:'W', before:'H', cost:6000, days:0, q:4, msg:'油漆刷好才貼浴室磁磚：搬料刮傷牆面要補漆，多花 NT$6,000。'},
+  {should:'W', before:'I', cost:4000, days:0, q:3, msg:'地板鋪好才做浴室：水泥砂漿踩進新地板，清潔修補 NT$4,000。'},
+  {should:'AC', before:'E', cost:6000, days:1, q:4, msg:'隔間封好才拉冷氣管：要割板穿管再補，多花 NT$6,000、1 天。'},
+  {should:'AC', before:'G', cost:9000, days:1, q:5, msg:'天花板封好才拉冷氣管：拆板走管，多花 NT$9,000、1 天。'},
+  {should:'O', before:'G', cost:7000, days:1, q:4, msg:'天花板封好才做窗簾盒：收邊接不起來要拆板，多花 NT$7,000、1 天。'},
+  {should:'O', before:'H', cost:5000, days:0, q:3, msg:'油漆刷好才做木作：木作要另外補土上漆，多花 NT$5,000。'},
+  {should:'H', before:'S', cost:5000, days:0, q:3, msg:'系統櫃裝好才油漆：櫃體要包膜、櫃邊要補漆，多花 NT$5,000。'},
+  {should:'I', before:'S', cost:6000, days:1, q:4, msg:'系統櫃裝好才鋪地板：櫃子要拆下來再裝，多花 NT$6,000、1 天。'},
+  {should:'S', before:'N', cost:3000, days:0, q:2, msg:'家具進場才裝系統櫃：家具要搬來搬去，多花 NT$3,000。'},
+];
+
+/* ---------- 工班 ---------- */
+const CREWS = {
+  clean:{name:'阿明班', tag:'乾淨俐落', mul:1.12, desc:'工地每天收乾淨，不抽菸不喝酒，業主最放心。工資比較高。',
+    look:{bg:'#d8eedd', skin:'#e2b48c', hair:'#222', shirt:'#2f7d4f', hat:'#ffffff'}},
+  smoke:{name:'阿龍班', tag:'菸不離手', mul:.95, desc:'手腳還算快，但菸一根接一根，業主很容易聞到菸味、看到菸蒂。',
+    look:{bg:'#e8e1d2', skin:'#c99a74', hair:'#222', shirt:'#6b7c85', hat:'#ffc94a', cig:true}},
+  drink:{name:'阿財班', tag:'愛喝兩杯', mul:.88, desc:'工資最便宜，中午常喝兩杯，隔天可能宿醉遲到，或做錯東西。',
+    look:{bg:'#f3d6c8', skin:'#d9a07c', hair:'#333', shirt:'#8a5a3b', hat:'#ff7a1a', blush:true, mood:'sad'}},
+  fast:{name:'小黑班', tag:'年輕手快', mul:1.0, desc:'年輕人做事快，有時候會提早完工，但收邊比較粗，容易出小瑕疵。',
+    look:{bg:'#ffd2b0', skin:'#b98560', hair:'#111', shirt:'#3a4c55', hat:'#58a6e0'}},
+};
+
+/* ---------- 工具設備 ---------- */
+const TOOLS = [
+  {id:'meter', ic:'📏', name:'雷射測距儀', price:15000, desc:'丈量更準：實際施工成本跟估價的誤差從 ±8% 降到 ±2%。'},
+  {id:'fan', ic:'💨', name:'除濕機＋工地風扇', price:18000, desc:'油漆乾得快：批土油漆少 1 天。'},
+  {id:'vac', ic:'🧹', name:'工業用吸塵器', price:22000, desc:'細清又快又乾淨：細清驗收費用 −50%，驗收少挑 1 個毛病，現場不留垃圾。'},
+  {id:'screw', ic:'🔩', name:'充電式螺絲槍組', price:28000, desc:'封板效率高：隔間封板、天花板封板費用 −10%。'},
+  {id:'saw', ic:'🪚', name:'圓鋸機＋集塵', price:35000, desc:'切板損料少：隔間封板、天花板費用再 −5%，不會再有粉塵抱怨。'},
+  {id:'laser', ic:'🔴', name:'雷射水平儀', price:42000, desc:'放樣時打出雷射參考線（顯示其中一道新隔間的位置），隔間品質 +2。'},
+  {id:'scaffold', ic:'🪜', name:'移動式施工架', price:50000, desc:'高處作業安全：天花板品質 +2，不會發生工安意外。'},
+  {id:'truck', ic:'🛻', name:'中古小貨車', price:120000, desc:'自己載料：不會再材料延遲、材料被偷；透天搬運費減半。'},
+];
+
+/* ---------- 格局（座標：1 公尺 = 40，原點 20） ---------- */
+const LAYOUTS = {
+  apt3:{name:'電梯公寓三房', elevator:true, floors:[{name:'1F', rooms:[
+    {n:'客廳',x:20,y:20,w:320,h:240,floor:1,ceil:1},
+    {n:'廚房',x:340,y:20,w:240,h:120,tile:1,fx:'counter'},
+    {n:'浴室',x:340,y:140,w:120,h:120,tile:1,ceil:1,wet:1,fx:'tub'},
+    {n:'儲藏間',x:460,y:140,w:120,h:120,floor:1,fx:'cabinet'},
+    {n:'主臥',x:20,y:260,w:280,h:140,floor:1,ceil:1},
+    {n:'次臥',x:300,y:260,w:280,h:140,floor:1,ceil:1}]}]},
+  new2:{name:'新成屋兩房', elevator:true, floors:[{name:'1F', rooms:[
+    {n:'客廳',x:20,y:20,w:360,h:240,floor:1,ceil:1},
+    {n:'廚房',x:380,y:20,w:200,h:120,tile:1,fx:'counter'},
+    {n:'浴室',x:380,y:140,w:120,h:120,tile:1,ceil:1,wet:1,fx:'tub'},
+    {n:'工作陽台',x:500,y:140,w:80,h:120,tile:1},
+    {n:'主臥',x:20,y:260,w:320,h:140,floor:1,ceil:1},
+    {n:'次臥',x:340,y:260,w:240,h:140,floor:1,ceil:1,fx:'wardrobe'}]}]},
+  office:{name:'商辦樓層', elevator:true, floors:[{name:'1F', rooms:[
+    {n:'辦公區',x:20,y:20,w:440,h:320,floor:1,ceil:1},
+    {n:'茶水間',x:460,y:20,w:120,h:120,tile:1,fx:'counter'},
+    {n:'廁所',x:460,y:140,w:120,h:120,tile:1,ceil:1,wet:1,fx:'toilet'},
+    {n:'機房',x:460,y:260,w:120,h:80,floor:1,fx:'cabinet'}]}]},
+  town3:{name:'透天三層', elevator:false, floors:[
+    {name:'1F', rooms:[
+      {n:'客廳',x:20,y:20,w:280,h:240,floor:1,ceil:1},
+      {n:'廚房',x:300,y:20,w:160,h:120,tile:1,fx:'counter'},
+      {n:'浴室',x:300,y:140,w:80,h:120,tile:1,ceil:1,wet:1,fx:'toilet'},
+      {n:'儲藏間',x:380,y:140,w:80,h:120,floor:1,fx:'cabinet'},
+      {n:'樓梯',x:460,y:20,w:120,h:240,stair:1}]},
+    {name:'2F', rooms:[
+      {n:'起居室',x:20,y:20,w:280,h:240,floor:1,ceil:1},
+      {n:'主臥',x:300,y:20,w:160,h:160,floor:1,ceil:1,fx:'wardrobe'},
+      {n:'浴室',x:300,y:180,w:160,h:80,tile:1,ceil:1,wet:1,fx:'tub'},
+      {n:'樓梯',x:460,y:20,w:120,h:240,stair:1}]},
+    {name:'3F', rooms:[
+      {n:'神明廳',x:20,y:20,w:160,h:240,floor:1,ceil:1,fx:'altar'},
+      {n:'起居室',x:180,y:20,w:280,h:240,floor:1,ceil:1},
+      {n:'樓梯',x:460,y:20,w:120,h:240,stair:1}]}]},
+  shop:{name:'店面＋樓上住家', elevator:false, floors:[
+    {name:'1F', rooms:[
+      {n:'店面',x:20,y:20,w:400,h:280,floor:1,ceil:1,fx:'oldcounter'},
+      {n:'廁所',x:420,y:20,w:160,h:120,tile:1,ceil:1,wet:1,fx:'toilet'},
+      {n:'樓梯',x:420,y:140,w:160,h:160,stair:1}]},
+    {name:'2F', rooms:[
+      {n:'客廳',x:20,y:20,w:240,h:280,floor:1,ceil:1},
+      {n:'主臥',x:260,y:20,w:160,h:160,floor:1,ceil:1},
+      {n:'浴室',x:260,y:180,w:160,h:120,tile:1,ceil:1,wet:1,fx:'tub'},
+      {n:'陽台',x:420,y:20,w:160,h:120,tile:1},
+      {n:'樓梯',x:420,y:140,w:160,h:160,stair:1}]}]},
+  loft:{name:'挑高樓中樓', elevator:true, floors:[
+    {name:'1F', rooms:[
+      {n:'挑高客廳',x:20,y:20,w:320,h:280,floor:1,ceil:1},
+      {n:'廚房',x:340,y:20,w:240,h:120,tile:1,fx:'counter'},
+      {n:'浴室',x:340,y:140,w:120,h:160,tile:1,ceil:1,wet:1,fx:'tub'},
+      {n:'樓梯',x:460,y:140,w:120,h:160,stair:1}]},
+    {name:'2F', rooms:[
+      {n:'夾層',x:20,y:20,w:320,h:280,floor:1,ceil:1},
+      {n:'主臥',x:340,y:20,w:240,h:120,floor:1,ceil:1,fx:'wardrobe'},
+      {n:'主浴',x:340,y:140,w:120,h:160,tile:1,ceil:1,wet:1,fx:'tub'},
+      {n:'樓梯',x:460,y:140,w:120,h:160,stair:1}]}]},
+};
+
+/* ---------- 關卡 ---------- */
+const PICKY = ['😊 好溝通','😐 有點要求','😠 很挑剔','😈 奧客等級'];
+const PAYER = ['準時付款','偶爾拖款','常常拖款','能拖就拖'];
+const LEVELS = [
+  {name:'老屋翻新', layout:'apt3', work:{floor:0, room:'客廳'}, place:'台中北區・電梯公寓 32 坪',
+   client:'林小姐', look:{bg:'#f6d9c8', skin:'#f3cfb3', hair:'#3b2a24', shirt:'#4f7cac', long:true, blush:true},
+   greet:'「老闆，我這間房子想整個翻新！」', story:'我在北區買了一間老公寓，設計師已經畫好施工圖了，你們照圖做就好：',
+   brief:['客廳角落隔一間<b>書房</b>，要隔音','天花板重做、換崁燈','換 <b>SPC 地板</b>、全室重新油漆'],
+   newRooms:[{name:'書房', box:[0,0,4,3], door:'h3_3', swing:'down'}], mainLabel:[260,240],
+   mode:'guided', hintCost:0, picky:0, payer:0, crews:['clean','smoke'], eventP:.4, costMul:1, deadline:25, style:'北歐',
+   paint:'暖灰', ceilReq:'flat', needLevel:true},
+  {name:'新成屋客房', layout:'new2', work:{floor:0, room:'客廳'}, place:'台中南屯・新成屋 28 坪',
+   client:'陳先生', look:{bg:'#d6e4f0', skin:'#e8c09c', hair:'#222', shirt:'#2f5d50', glasses:true},
+   greet:'「我們剛交屋，想在客廳隔一間客房。」', story:'新成屋預算比較緊，能省則省，但要照設計師的圖：',
+   brief:['客廳右上隔一間<b>客房</b>，要隔音','建商天花板拆掉，改做<b>明架</b>省預算','SPC 地板、全室油漆'],
+   newRooms:[{name:'客房', box:[6,0,9,3], door:'h6_3', swing:'down'}], mainLabel:[140,240],
+   mode:'guided', hintCost:3000, picky:1, payer:0, crews:['clean','smoke','drink'], eventP:.45, costMul:.95, deadline:23, style:'日式無印',
+   paint:'米白', ceilReq:'grid', needLevel:false},
+  {name:'三代同堂', layout:'apt3', work:{floor:0, room:'客廳'}, place:'台中西屯・電梯大樓 34 坪',
+   client:'黃太太', look:{bg:'#efd9e8', skin:'#f0c8a8', hair:'#7a6a64', shirt:'#9b4f8a', long:true},
+   greet:'「孫子要搬來住，客廳要隔一間小孩房。」', story:'這次工序要你自己決定，做完一項再叫下一班師傅進場：',
+   brief:['客廳左下隔一間<b>小孩房</b>，要隔音','天花板<b>暗架平頂</b>、換崁燈','老屋地面不平','全室油漆'],
+   newRooms:[{name:'小孩房', box:[0,3,4,6], door:'v4_5', swing:'right'}], mainLabel:[260,60],
+   mode:'schedule', hintMax:1, picky:1, payer:1, crews:['clean','smoke','drink','fast'], eventP:.5, costMul:1.05, deadline:25, style:'北歐',
+   paint:'霧藍', ceilReq:'flat', needLevel:true},
+  {name:'新創辦公室', layout:'office', work:{floor:0, room:'辦公區'}, place:'台中七期・商辦 40 坪',
+   client:'吳執行長', look:{bg:'#dde3f5', skin:'#f0c8a8', hair:'#2a2a2a', shirt:'#5b6fa8'},
+   greet:'「我們公司下個月要搬進來，需要一間會議室。」', story:'辦公室講求效率，明架天花板就好，但會議室要隔音：',
+   brief:['辦公區左上隔一間<b>會議室</b>（5m × 3m）','天花板全部<b>明架</b>','地面平整可直接鋪 SPC','牆面米白'],
+   newRooms:[{name:'會議室', box:[0,0,5,3], door:'h4_3', swing:'down'}], mainLabel:[300,300],
+   mode:'schedule', hintMax:1, picky:1, payer:1, crews:['clean','smoke','drink','fast'], eventP:.5, costMul:1.15, deadline:23, style:'工業',
+   paint:'米白', ceilReq:'grid', needLevel:false},
+  {name:'透天二樓改造', layout:'town3', work:{floor:1, room:'起居室'}, place:'彰化員林・透天三層',
+   client:'李伯伯', look:{bg:'#e6e0d0', skin:'#e2b48c', hair:'#bbb', shirt:'#4a6b7a', mustache:true, glasses:true},
+   greet:'「孩子要回來住，二樓起居室要隔一間書房。」', story:'透天厝沒有電梯，材料要一層一層搬。整棟三層的天花板、地板跟油漆都要一起做：',
+   brief:['<b>2F</b> 起居室左側隔一間<b>書房</b>（整面寬）','全棟天花板<b>暗架</b>、換崁燈','老透天地面不平','全棟油漆'],
+   newRooms:[{name:'書房', box:[0,0,3,6], door:'v3_4', swing:'right'}], mainLabel:[200,140],
+   mode:'schedule', hintMax:1, picky:2, payer:1, crews:['smoke','drink','fast'], eventP:.55, costMul:1.35, deadline:29, style:'日式無印', big:true,
+   paint:'暖灰', ceilReq:'flat', needLevel:true},
+  {name:'店面改裝', layout:'shop', work:{floor:0, room:'店面'}, place:'台中一中街・店面＋住家',
+   client:'王老闆娘', look:{bg:'#fde3d3', skin:'#f0c8a8', hair:'#5a2a1a', shirt:'#c0563b', long:true, blush:true},
+   greet:'「我要開飲料店，後面要隔一間倉庫！」', story:'店面要趕快開幕，商圈晚上不能吵，錢我會給啦……只是有時候會晚一點：',
+   brief:['店面左後方隔一間<b>倉庫</b>','店面天花板<b>明架</b>','地面不平要整平','牆面米白'],
+   newRooms:[{name:'倉庫', box:[0,4,4,7], door:'v4_6', swing:'right'}], mainLabel:[260,110],
+   mode:'schedule', hintMax:0, picky:2, payer:2, crews:['clean','smoke','drink','fast'], eventP:.6, costMul:1.25, deadline:23, style:'工業',
+   paint:'米白', ceilReq:'grid', needLevel:true},
+  {name:'樓中樓書房', layout:'loft', work:{floor:1, room:'夾層'}, place:'台中南區・挑高樓中樓',
+   client:'蔡先生', look:{bg:'#e0d8f0', skin:'#eac3a0', hair:'#1f1f1f', shirt:'#2b3438', glasses:true, mood:'angry'},
+   greet:'「我對細節很要求，請照圖施工，不要讓我抓到毛病。」', story:'我會常常來看，有意見會直接說。錢的部分，做到我滿意才付：',
+   brief:['<b>2F</b> 夾層隔一間<b>書房</b>，門開在側邊','天花板<b>暗架平頂</b>','地面平整可直接鋪','牆面霧藍'],
+   newRooms:[{name:'書房', box:[0,0,4,3], door:'v4_2', swing:'right'}], mainLabel:[200,260],
+   mode:'schedule', hintMax:0, picky:3, payer:2, crews:['clean','smoke','drink'], eventP:.6, costMul:1.3, deadline:23, style:'現代輕奢',
+   paint:'霧藍', ceilReq:'flat', needLevel:false},
+  {name:'透天三樓和室', layout:'town3', work:{floor:2, room:'起居室'}, place:'南投草屯・透天三層',
+   client:'謝阿嬤', look:{bg:'#f0e6d8', skin:'#e8c4a4', hair:'#ccc', shirt:'#7a5a8a', long:true},
+   greet:'「三樓要隔一間和室給我拜拜後休息。」', story:'阿嬤錢都交給兒子管，兒子很忙，款項常常晚給。好師傅都被訂走了：',
+   brief:['<b>3F</b> 起居室右上隔一間<b>和室</b>','全棟天花板<b>暗架</b>','老屋地面不平','全棟油漆暖灰'],
+   newRooms:[{name:'和室', box:[8,0,11,4], door:'h8_4', swing:'down'}], mainLabel:[250,240],
+   mode:'schedule', hintMax:0, picky:3, payer:3, crews:['drink','fast'], eventP:.65, costMul:1.4, deadline:28, style:'日式無印', big:true,
+   paint:'暖灰', ceilReq:'flat', needLevel:true},
+  {name:'辦公室趕工', layout:'office', work:{floor:0, room:'辦公區'}, place:'台中西區・商辦 40 坪',
+   client:'周總經理', look:{bg:'#d8dde8', skin:'#e2b48c', hair:'#333', shirt:'#1f2a2e', glasses:true},
+   greet:'「主管室跟會議室，三週內要好。」', story:'公司規定：驗收合格才付尾款，付款流程要跑一個月：',
+   brief:['辦公區隔<b>主管室</b>＋<b>會議室</b>兩間','天花板<b>明架</b>','地面平整','牆面米白，<b>工期很趕</b>'],
+   newRooms:[{name:'主管室', box:[0,0,4,3], door:'h1_3', swing:'down'},{name:'會議室', box:[4,0,8,3], door:'h6_3', swing:'down'}], mainLabel:[300,300],
+   mode:'schedule', hintMax:0, picky:2, payer:3, crews:['clean','smoke','drink','fast'], eventP:.7, costMul:1.3, deadline:24, style:'現代輕奢',
+   paint:'米白', ceilReq:'grid', needLevel:false},
+  {name:'終極豪宅', layout:'loft', work:{floor:1, room:'夾層'}, place:'台中七期・豪宅樓中樓',
+   client:'鄭董', look:{bg:'#f6e7b8', skin:'#d9a985', hair:'#222', shirt:'#c9a33a', mustache:true, mood:'angry'},
+   greet:'「錢不是問題，問題是我要最好的。」', story:'我太太跟我意見常常不一樣，改來改去很正常。尾款嘛……看你表現：',
+   brief:['<b>2F</b> 夾層隔<b>書房</b>＋<b>視聽室</b>兩間','天花板<b>暗架平頂</b>','老建物地面不平','牆面奶茶色'],
+   newRooms:[{name:'書房', box:[0,0,4,3], door:'h2_3', swing:'down'},{name:'視聽室', box:[5,0,8,4], door:'h6_4', swing:'down'}], mainLabel:[120,260],
+   mode:'schedule', hintMax:0, picky:3, payer:3, crews:['smoke','drink','fast'], eventP:.75, costMul:1.5, deadline:26, style:'現代輕奢',
+   paint:'奶茶', ceilReq:'flat', needLevel:true},
+];
+// 每關加做的工項（讓每關的施工順序不一樣）
+const LV_EXTRA = [[],['S'],['W'],['AC'],['W','O'],['AC','S'],['O','S'],['W','AC'],['AC','O'],['W','O','S','AC']];
+const LV_MAXEV = [3,3,4,4,5,5,5,6,6,6];
+LEVELS.forEach((lv,i)=>{ lv.extra=LV_EXTRA[i]; lv.deadline += lv.extra.reduce((a,id)=>a+T[id].days,0); lv.eventP=Math.min(.5, lv.eventP*.8); });
+const LV_NO = ['第一關','第二關','第三關','第四關','第五關','第六關','第七關','第八關','第九關','第十關'];
+
+/* ---------- 隨機事件 ---------- */
+// spk: 說話的人；minLv: 從第幾關（0 起算）開始出現
+const EVENTS = [
+  {id:'socket', minLv:0, spk:'client', cond:()=>S.done.B, title:'業主追加需求', text:()=>`「${roomNames()}想多加兩組插座跟一個網路孔，可以嗎？」`, opts:()=>[
+    {label:'接下來', sub:'追加款 +NT$8,000，成本約 NT$4,000', fn:()=>{S.revenue+=8000; S.extraRev+=8000; spend(4000); sat(5);
+      if(S.done.E){addDays(1); spend(2000); log('隔間已封板，得開孔走線，多花 1 天','bad')} else log('趁還沒封板，插座直接配進去','good')}},
+    {label:'婉拒，照原合約', sub:'滿意度下降', fn:()=>{sat(-6); log('婉拒追加，業主有點失望','bad')}}]},
+  {id:'leak', minLv:0, spk:'crew', cond:()=>S.done.B && !S.done.G, title:'拆除後發現問題', text:()=>'舊天花板拆掉後，浴室上方樓板出現滲水痕跡。', opts:()=>[
+    {label:'先做防水處理', sub:'NT$15,000・1 天', fn:()=>{spend(15000); addDays(1); sat(3); log('浴室樓板防水處理完成','good')}},
+    {label:'先不處理，照原進度', sub:'省錢省時間……', fn:()=>{S.flags.leak=true; log('滲水問題暫時擱著')}}]},
+  {id:'delay', minLv:0, spk:'supplier', cond:()=>!has('truck'), title:'材料延遲', text:()=>'板材行來電：這批板材缺貨，要晚一天才能到。', opts:()=>[
+    {label:'向別家調貨', sub:'多花 NT$5,000，不延誤', fn:()=>{spend(5000); log('臨時調貨，多花 NT$5,000')}},
+    {label:'等一天', sub:'工期 +1 天', fn:()=>{addDays(1); log('等材料，停工 1 天','bad')}}]},
+  {id:'noise', minLv:0, spk:'neighbor', cond:()=>S.done.B, title:'鄰居抱怨', text:()=>'鄰居上門抱怨：「每天都好吵，小孩都不能睡午覺！」', opts:()=>[
+    {label:'送水果禮盒致意，調整施工時段', sub:'NT$2,000', fn:()=>{spend(2000); sat(2); log('跟鄰居打好關係','good')}},
+    {label:'回他：我們都在合法時段施工', sub:'鄰居轉頭去找業主……', fn:()=>{sat(-6); log('業主被鄰居投訴，心情不好','bad')}}]},
+  {id:'visit', minLv:0, spk:'client', cond:()=>S.order.length>=3, title:'業主來看進度', text:()=>'業主下班順路到現場看看。', opts:()=>[
+    {label:'帶業主巡一圈，說明進度', fn:()=>{
+      if(S.debris.length){ sat(-6); log(`業主看到地上的${S.crew==='smoke'?'菸蒂':'酒瓶'}，臉都綠了`,'bad'); }
+      else if(S.crew==='clean'){ sat(8); log('現場乾乾淨淨，業主很放心','good'); }
+      else if(S.quality>=90){ sat(5); log('進度清楚，業主滿意','good'); }
+      else { sat(-6); log('業主看到返工痕跡，有點擔心','bad'); } }}]},
+  {id:'worker', minLv:0, spk:'crew', title:'師傅請假', text:()=>'封板師傅家裡有事，明天要請假。', opts:()=>[
+    {label:'叫支援師傅', sub:'NT$4,500', fn:()=>{spend(4500); log('請支援師傅頂上')}},
+    {label:'停工一天', sub:'工期 +1 天', fn:()=>{addDays(1); log('師傅請假，停工 1 天','bad')}}]},
+  {id:'dust', minLv:1, spk:'client', cond:()=>S.done.B && !has('saw'), title:'粉塵抱怨', text:()=>'「切板的粉塵飄得整棟都是，管理員一直打電話給我！」', opts:()=>[
+    {label:'請清潔公司加強清潔', sub:'NT$2,500', fn:()=>{spend(2500); log('加強清潔公共區域')}},
+    {label:'跟業主說施工本來就會有灰塵', sub:'滿意度下降', fn:()=>{sat(-5); log('業主不太高興','bad')}}]},
+  {id:'change', minLv:1, spk:'client', cond:()=>!S.done.H, title:'業主猶豫不決', text:()=>'「油漆顏色可以等我再想想嗎？我看了網路上的照片……」', opts:()=>[
+    {label:'請業主三天內定案，先做其他工項', sub:'滿意度 +3', fn:()=>{sat(3); log('跟業主約好定案時間','good')}},
+    {label:'跟業主說照圖做，不能改', sub:'滿意度下降', fn:()=>{sat(-5); log('業主覺得你不好溝通','bad')}}]},
+  {id:'inspect', minLv:1, spk:'designer', cond:()=>S.done.D && !S.done.E, title:'設計師要查驗', text:()=>'「封板前我要看一下骨架跟管線，你等我明天過去。」', opts:()=>[
+    {label:'等設計師查驗完再封板', sub:'工期 +1 天，品質 +3', fn:()=>{addDays(1); q(3); log('設計師查驗通過','good')}},
+    {label:'拍照傳給設計師，直接封板', sub:'省時間，但業主不太放心', fn:()=>{sat(-4); log('沒等查驗就封板','bad')}}]},
+  {id:'power', minLv:1, spk:'crew', title:'整棟停電', text:()=>'「老闆，台電說今天整條街停電到下午！」', opts:()=>[
+    {label:'租發電機繼續做', sub:'NT$3,000', fn:()=>{spend(3000); log('租發電機，進度不受影響')}},
+    {label:'放大家一天假', sub:'工期 +1 天', fn:()=>{addDays(1); log('停電停工 1 天','bad')}}]},
+  {id:'moveDoor', minLv:2, spk:'client', cond:()=>S.done.D && !S.done.E && L().picky>=1, title:'業主改設計', text:()=>'「我想了一下，門可不可以換到另一邊？」（施工圖沒變，是業主臨時改）', opts:()=>[
+    {label:'談追加費用後照改', sub:'追加 +NT$8,000、成本 NT$6,000、+1 天', fn:()=>{S.revenue+=8000; S.extraRev+=8000; spend(6000); addDays(1); sat(-2); S.changed=true; log('門位置變更，收追加款','good')}},
+    {label:'免費幫業主改', sub:'成本 NT$6,000、+1 天，滿意度上升', fn:()=>{spend(6000); addDays(1); sat(4); S.changed=true; log('免費變更門位置')}},
+    {label:'堅持照圖施工', sub:'滿意度大幅下降', fn:()=>{sat(-8); log('拒絕變更，業主不高興','bad')}}]},
+  {id:'repaint', minLv:2, spk:'client', cond:()=>S.done.H && !S.done.K && L().picky>=1, title:'業主看了顏色後悔', text:()=>'「刷起來跟我想像的不一樣耶……可以換顏色嗎？」', opts:()=>[
+    {label:'收費重刷', sub:'追加 +NT$15,000、成本 NT$14,000、+1 天', fn:()=>{S.revenue+=15000; S.extraRev+=15000; spend(14000); addDays(1); sat(-3); S.changed=true; log('重刷一次牆面（收費）')}},
+    {label:'免費重刷', sub:'成本 NT$14,000、+1 天', fn:()=>{spend(14000); addDays(1); sat(4); S.changed=true; log('免費重刷牆面')}},
+    {label:'跟業主說顏色是他自己選的', sub:'滿意度大幅下降', fn:()=>{sat(-10); log('業主覺得你推卸責任','bad')}}]},
+  {id:'revert', minLv:4, spk:'client', cond:()=>S.changed && L().picky>=3, title:'業主又改回來', text:()=>'「我太太說還是原本的比較好，改回來吧。」', opts:()=>[
+    {label:'收費改回', sub:'追加 +NT$6,000、成本 NT$6,000、+1 天', fn:()=>{S.revenue+=6000; S.extraRev+=6000; spend(6000); addDays(1); sat(-4); log('又改回原設計（收費）')}},
+    {label:'忍下來免費改回', sub:'成本 NT$6,000、+1 天', fn:()=>{spend(6000); addDays(1); sat(2); log('又改回原設計（免費）')}},
+    {label:'拒絕再改', sub:'滿意度大幅下降', fn:()=>{sat(-10); log('拒絕再改，業主很不爽','bad')}}]},
+  {id:'hours', minLv:2, spk:'guard', title:'管委會限制施工時間', text:()=>'「最近住戶抱怨很多，下午一點到兩點、五點以後都不准施工。」', opts:()=>[
+    {label:'假日加班趕進度', sub:'加班費 NT$8,000', fn:()=>{spend(8000); log('加班補回進度')}},
+    {label:'照規定，工期延後', sub:'工期 +1 天', fn:()=>{addDays(1); log('施工時間縮短，延後 1 天','bad')}}]},
+  {id:'elevator', minLv:2, spk:'crew', cond:()=>LY().elevator, title:'電梯故障', text:()=>'「老闆，電梯壞了，板材要用走的扛上去！」', opts:()=>[
+    {label:'叫搬運工人扛', sub:'NT$6,000', fn:()=>{spend(6000); log('請搬運工扛料上樓')}},
+    {label:'等電梯修好', sub:'工期 +1 天', fn:()=>{addDays(1); log('等電梯，停工 1 天','bad')}}]},
+  {id:'stairs', minLv:0, spk:'crew', cond:()=>!LY().elevator && S.done.B, title:'沒有電梯', text:()=>`「透天沒電梯，板材要一層一層扛上 ${WF().name}。」`, opts:()=>[
+    {label:'請搬運工', sub:has('truck')?'NT$5,000（有貨車，減半）':'NT$10,000', fn:()=>{spend(has('truck')?5000:10000); log('請搬運工扛料')}},
+    {label:'自己班底慢慢扛', sub:'工期 +1 天、師傅累到品質下降', fn:()=>{addDays(1); q(-3); log('自己扛料，大家累壞了','bad')}}]},
+  {id:'typhoon', minLv:3, spk:'crew', title:'颱風要來了', text:()=>'「氣象局發海上警報，明天停班停課！」', opts:()=>[
+    {label:'先做防颱：封窗、板材墊高', sub:'NT$4,000、工期 +1 天', fn:()=>{spend(4000); addDays(1); log('防颱完成，材料沒受損','good')}},
+    {label:'直接放颱風假', sub:'工期 +1 天，板材可能受潮', fn:()=>{addDays(1); q(-6); log('雨水打進來，部分板材受潮','bad')}}]},
+  {id:'accident', minLv:3, spk:'crew', cond:()=>!has('scaffold') && S.done.B, title:'工安意外', text:()=>'「小陳從梯子上摔下來，腳扭到了！」', opts:()=>[
+    {label:'立刻送醫，補人手', sub:'醫藥費＋補人 NT$15,000、+1 天', fn:()=>{spend(15000); addDays(1); sat(-3); log('工安意外，送醫處理','bad')}}]},
+  {id:'theft', minLv:4, spk:'crew', cond:()=>!has('truck'), title:'材料被偷', text:()=>'「昨天放在一樓的 C 型鋼不見了一整綑！」', opts:()=>[
+    {label:'馬上重新叫料', sub:'NT$12,000', fn:()=>{spend(12000); log('材料被偷，重新叫料','bad')}},
+    {label:'報警、等調監視器', sub:'工期 +2 天', fn:()=>{addDays(2); log('報警處理，停工 2 天','bad')}}]},
+  {id:'report', minLv:3, spk:'guard', title:'被鄰居檢舉', text:()=>'「有人檢舉你們沒申請室內裝修許可，建管處要來看。」', opts:()=>[
+    {label:'請設計師補送文件、繳規費', sub:'NT$6,000', fn:()=>{spend(6000); log('補件完成')}},
+    {label:'停工等審查', sub:'工期 +2 天', fn:()=>{addDays(2); sat(-3); log('停工等審查','bad')}}]},
+  {id:'upleak', minLv:5, spk:'crew', cond:()=>S.done.G, title:'樓上漏水', text:()=>'「新做好的天花板出現水漬，是樓上浴室漏下來的！」', opts:()=>[
+    {label:'自己先修好再跟樓上協調', sub:'NT$8,000', fn:()=>{spend(8000); log('天花板局部更換')}},
+    {label:'等樓上修好再處理', sub:'工期 +1 天、業主不高興', fn:()=>{addDays(1); sat(-4); log('等樓上修漏水','bad')}}]},
+  {id:'termite', minLv:5, spk:'crew', cond:()=>S.done.B && L().needLevel, title:'發現白蟻', text:()=>'「拆開舊木作，裡面都是白蟻！」', opts:()=>[
+    {label:'請除蟲公司全面處理', sub:'NT$18,000、+1 天', fn:()=>{spend(18000); addDays(1); sat(3); log('白蟻處理完成','good')}},
+    {label:'先噴一噴就好', sub:'省錢……', fn:()=>{S.flags.termite=true; log('白蟻只做表面處理')}}]},
+  {id:'redraw', minLv:3, spk:'designer', cond:()=>!S.done.H && !S.flags.redrawn, title:'設計師改圖', text:()=>S.lv>=6?'「業主改了一些東西，<b>G-00 施工說明</b>我更新了，你再看一下。」':`「業主說牆面改成<b>${S.newPaint}</b>，施工說明已經更新。」`, pre:()=>{ const opts=Object.keys(PAINTS).filter(p=>p!==S.paintReq); S.newPaint=opts[Math.floor(Math.random()*opts.length)]; }, opts:()=>[
+    {label:'了解，我會照新的圖做', fn:()=>{S.paintReq=S.newPaint; S.flags.redrawn=true; log('施工說明已更新（油漆顏色）')}}]},
+];
+const EVENT_SPK_NAMES = {guard:'管委會主委', designer:'設計師 Amy'};
+
+/* =========================================================
+   狀態、生涯存檔、幾何、成本
+   ========================================================= */
+let S, lastLog=-1;
+const L  = () => LEVELS[S.lv];
+const LY = () => LAYOUTS[L().layout];
+const WF = () => LY().floors[L().work.floor];
+const GR = () => WF().rooms.find(r=>r.n===L().work.room);
+
+let PROG = {cash:150000, tools:{}, best:{}, all:false, mute:false};
+try{ const p=JSON.parse(localStorage.getItem('reno-career')||'null'); if(p && typeof p==='object') PROG={...PROG, ...p, tools:p.tools||{}, best:p.best||{}}; }catch(e){}
+function saveProg(){ try{ localStorage.setItem('reno-career', JSON.stringify(PROG)); }catch(e){} }
+const has = id => !!PROG.tools[id];
+const unlocked = i => i===0 || PROG.all || !!PROG.best[i-1];
+
+const fmt = n => 'NT$' + Math.round(n).toLocaleString('zh-TW');
+const k$ = n => (n>=0?'+':'−') + Math.abs(Math.round(n)).toLocaleString('zh-TW');
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+function log(msg, kind=''){ S.log.unshift({d:S.day, msg, kind}); }
+let CTX='';
+function spend(n){ S.spent += n; }
+function addDays(n){ S.day += n; }
+function q(n){ S.quality = clamp(Math.round(S.quality+n), 0, 100); }
+function sat(n){ if(n<0) n = n*(1+0.25*L().picky); const b=S.sat; S.sat = clamp(Math.round(S.sat+n), 0, 100); if(S.sat!==b) S.satLog.push({n:S.sat-b, ctx:CTX||'其他'}); }
+const curTasks = () => TASKS.filter(t=>!t.extra || L().extra.includes(t.id));
+const roomNames = () => S.newRooms.map(r=>r.name).join('、');
+
+function newState(lv){
+  return {lv, phase:'intro', day:0, deadline:LEVELS[lv].deadline, revenue:0, extraRev:0, received:0, spent:0, quality:100, sat:80,
+    done:{}, order:[], choices:{}, walls:new Set(), lights:new Set(), log:[], fired:{}, flags:{}, paint:null, ceil:null,
+    mode:null, hints:0, reworks:0, idle:0, showCeil:true, active:null, busy:false, justDone:null, plan:[], queue:[], cur:null,
+    crew:null, debris:[], midPaid:false, furn:null, defects:null, contract:0, satLog:[], evCount:0, lastEv:-9, costBuild:0, costRework:0, depAmt:0, midAmt:0, midGot:0, finGot:0, withheld:0, hist:[], fvar:{}, cardOrder:[], wetCeil:null, demoSel:new Set(), demoItems:[], missedCeil:[], plugSel:new Set(), plugKeys:[], furniture:null, midLate:false, paintReq:LEVELS[lv].paint, view:'3d', floorView:LEVELS[lv].work.floor,
+    target:[], doors:[], newRooms:[], lightsReq:[], plugs:[], partF:1, interest:0};
+}
+function edgeXY(k){ const [,dir,i,j]=k.match(/([hv])(\d+)_(\d+)/); const x=20+40*(+i), y=20+40*(+j); return dir==='h'?[x,y,x+40,y]:[x,y,x,y+40]; }
+function gridIdx(){ const g=GR(); const i0=(g.x-20)/40, j0=(g.y-20)/40; return {i0, j0, i1:i0+g.w/40, j1:j0+g.h/40}; }
+function cellsOf(x,y,w,h){ const out=[]; for(let cx=x+20; cx<x+w; cx+=40) for(let cy=y+20; cy<y+h; cy+=40) out.push([cx,cy]); return out; }
+function pickLights(cells, n){
+  if(!cells.length) return [];
+  const mx=cells.reduce((a,c)=>a+c[0],0)/cells.length, my=cells.reduce((a,c)=>a+c[1],0)/cells.length;
+  const sorted=[...cells].sort((a,b)=>{ const da=Math.hypot(a[0]-mx,a[1]-my), db=Math.hypot(b[0]-mx,b[1]-my); return da-db || b[1]-a[1] || a[0]-b[0]; });
+  const out=[sorted[0]];
+  if(n>1){ const sec=sorted.find(c=>Math.hypot(c[0]-out[0][0], c[1]-out[0][1])>=(n>1&&cells.length>=12?80:40) && c!==out[0]); if(sec) out.push(sec); }
+  return out;
+}
+function setupLevel(){
+  const lv=L(), g=gridIdx(), edges=new Set(), NR=S.nrOverride||lv.newRooms, keep=S._keep, saved={d:S.deadline, o:S.cardOrder, demo:S.demoItems};
+  S.newRooms = NR.map(nr=>{ const [i0,j0,i1,j1]=nr.box; return {...nr, x0:20+40*i0, y0:20+40*j0, x1:20+40*i1, y1:20+40*j1}; });
+  NR.forEach(nr=>{ const [i0,j0,i1,j1]=nr.box;
+    for(let i=i0;i<i1;i++){ if(j0>g.j0) edges.add(`h${i}_${j0}`); if(j1<g.j1) edges.add(`h${i}_${j1}`); }
+    for(let j=j0;j<j1;j++){ if(i0>g.i0) edges.add(`v${i0}_${j}`); if(i1<g.i1) edges.add(`v${i1}_${j}`); } });
+  S.target=[...edges];
+  S.deadline = lv.deadline;
+  const ids=curTasks().map(t=>t.id);
+  if(lv.mode==='schedule'){ for(let i=ids.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [ids[i],ids[j]]=[ids[j],ids[i]]; } }
+  S.cardOrder=ids;
+  S.doors=NR.map(nr=>({k:nr.door, swing:nr.swing}));
+  S.partF = S.target.length/7;
+  // 燈位
+  const lights=[];
+  const inNew=(c)=>S.newRooms.some(r=>c[0]>r.x0&&c[0]<r.x1&&c[1]>r.y0&&c[1]<r.y1);
+  S.newRooms.forEach(r=>{ pickLights(cellsOf(r.x0,r.y0,r.x1-r.x0,r.y1-r.y0),2).forEach(c=>lights.push(c)); });
+  const gr=GR(); pickLights(cellsOf(gr.x,gr.y,gr.w,gr.h).filter(c=>!inNew(c)),2).forEach(c=>lights.push(c));
+  WF().rooms.filter(r=>r.ceil && r!==gr).forEach(r=>{ const cs=cellsOf(r.x,r.y,r.w,r.h); pickLights(cs, cs.length>=12?2:1).forEach(c=>lights.push(c)); });
+  S.lightsReq = lights.map(c=>c.join(','));
+  // 插座：放在牆線的格線中點（E-01）
+  const ds=new Set(S.doors.map(d=>d.k)); S.plugKeys=[];
+  NR.forEach(nr=>{ const [i0,j0,i1,j1]=nr.box, jm=j0+Math.floor((j1-j0-1)/2);
+    const pick=(arr)=>arr.find(k=>!ds.has(k)&&!S.plugKeys.includes(k));
+    [pick([`v${i0}_${jm}`,`v${i0}_${jm+1}`]), pick([`v${i1}_${jm}`,`v${i1}_${jm+1}`]), pick([`h${i0+1}_${j1}`,`h${i0}_${j1}`,`h${i0+1}_${j0}`])].forEach(k=>{ if(k) S.plugKeys.push(k); }); });
+  S.plugs=S.plugKeys.map(edgeMid);
+  // 拆除項目（D-01）
+  S.demoItems=[];
+  WF().rooms.forEach((r,ri)=>{
+    if(r.ceil) S.demoItems.push({id:'c'+ri, kind:'ceil', room:r.n, must:true, label:'舊天花板', rect:[r.x+8, r.y+r.h-28, 68, 20]});
+    if(r.fx){ const must=['cabinet','wardrobe','oldcounter'].includes(r.fx); S.demoItems.push({id:'f'+ri, kind:'fx', fx:r.fx, room:r.n, must, label:FX_NAME[r.fx], rect:fxRect(r)}); }
+  });
+  if(keep){ S.deadline=saved.d; S.cardOrder=saved.o; S.demoItems=saved.demo; }
+}
+const FX_NAME={counter:'廚具',tub:'浴缸',toilet:'馬桶',altar:'神明桌',cabinet:'舊木作櫃',wardrobe:'舊衣櫃',oldcounter:'舊櫃台'};
+function fxRect(r){
+  switch(r.fx){
+    case 'counter': return [r.x+8, r.y+6, r.w-16, 22];
+    case 'tub': return [r.x+r.w-42, r.y+8, 34, Math.min(84,r.h-16)];
+    case 'toilet': return [r.x+r.w-36, r.y+r.h-42, 24, 30];
+    case 'altar': return [r.x+20, r.y+8, r.w-40, 22];
+    case 'cabinet': return [r.x+12, r.y+40, r.w-24, 34];
+    case 'wardrobe': return [r.x+r.w-32, r.y+12, 22, r.h-24];
+    case 'oldcounter': return [r.x+r.w-150, r.y+r.h-48, 130, 26];
+  } return null;
+}
+const fxGone = r => { if(!S||!S.demoItems) return false; const it=S.demoItems.find(d=>d.kind==='fx'&&d.room===r.n); return !!(it && it.must && S.done.B && S.demoSel.has(it.id)); };
+const fxOnWork = (r,f) => f===L().work.floor;
+function edgeMid(k){ const [a,b,c,d]=edgeXY(k); return [(a+c)/2,(b+d)/2]; }
+function edgeSpots(){ const g=gridIdx(), out=[];
+  for(let j=g.j0;j<=g.j1;j++) for(let i=g.i0;i<g.i1;i++) out.push(`h${i}_${j}`);
+  for(let i=g.i0;i<=g.i1;i++) for(let j=g.j0;j<g.j1;j++) out.push(`v${i}_${j}`);
+  return out; }
+function roomCenter(){ const r=S.newRooms[0]; return [Math.round((r.x0+r.x1)/2), Math.round((r.y0+r.y1)/2)]; }
+function taskPos(id){
+  if(id==='D'||id==='E') return roomCenter();
+  const g=GR(), cx=g.x+g.w/2, cy=g.y+g.h/2;
+  const off={A:[0,0],B:[-40,10],C:[40,-20],F:[0,40],G:[40,40],H:[-40,40],I:[0,60],J:[20,-40],K:[0,0]}[id]||[0,0];
+  return [clamp(cx+off[0], g.x+20, g.x+g.w-20), clamp(cy+off[1], g.y+20, g.y+g.h-20)];
+}
+
+/* ---------- 成本與天數 ---------- */
+function crewMul(){ return S.crew ? CREWS[S.crew].mul : 1; }
+function adjCost(id, base){
+  let c = base * L().costMul * crewMul();
+  if(id==='D'||id==='E') c *= S.partF;
+  if(has('screw') && (id==='E'||id==='G')) c *= .9;
+  if(has('saw') && 'EFG'.includes(id)) c *= .95;
+  if(has('vac') && id==='K') c *= .5;
+  if(id==='M') c *= S.doors.length;
+  if(id==='N') c = base;
+  return Math.round(c/100)*100;
+}
+function adjDays(id, base){
+  let d=base;
+  if(L().big && 'BCHI'.includes(id)) d+=1;
+  if((id==='D'||id==='E') && S.target.length>10) d+=1;
+  if(id==='H' && has('fan')) d=Math.max(1,d-1);
+  return d;
+}
+function estimate(){
+  const lv=L(), pick={E:22000, F:lv.ceilReq==='flat'?44000:30000, G:36000, H:42000, I:lv.needLevel?62000:50000, M:15000, N:0};
+  const save=S.crew; S.crew=null;
+  const tot=curTasks().reduce((a,t)=>a+adjCost(t.id, t.cost ?? pick[t.id]),0);
+  S.crew=save; return Math.round(tot/10000)*10000;
+}
+
+/* ---------- 飄字 ---------- */
+function snap(){ return {m:S.received-S.spent, d:S.day, q:S.quality, s:S.sat}; }
+function withFloats(fn){
+  const b=snap(); fn(); const a=snap(); const out=[];
+  if(!['play','plan','run','ending'].includes(S.phase)) return;
+  if(a.m!==b.m) out.push([`💰 ${k$(a.m-b.m)}`, a.m>b.m?'good':'bad', 'm']);
+  if(a.d!==b.d) out.push([`⏱ +${a.d-b.d} 天`, 'neu', 'd']);
+  if(a.q!==b.q) out.push([`⭐ 品質 ${a.q>b.q?'+':'−'}${Math.abs(a.q-b.q)}`, a.q>b.q?'good':'bad', 'q']);
+  if(a.s!==b.s) out.push([`😊 滿意度 ${a.s>b.s?'+':'−'}${Math.abs(a.s-b.s)}`, a.s>b.s?'good':'bad', 's']);
+  if(a.m>b.m) Music.sfx('ding');
+  const box=document.getElementById('floats');
+  out.forEach(([t,c,key],i)=>{ const el=document.createElement('div'); el.className='float '+c; el.textContent=t; el.style.animationDelay=(i*0.22)+'s'; box.appendChild(el); setTimeout(()=>el.remove(), 2600+i*220);
+    const r=document.querySelector(`[data-res="${key}"]`); if(r){ r.classList.remove('pulse'); void r.offsetWidth; r.classList.add('pulse'); } });
+}
+
+/* ---------- 對話框佇列 ---------- */
+const queue=[]; let open=null, pendingAfter=null;
+function showModal(m){ queue.push(m); if(!open) nextModal(); }
+function tryAfter(){ setTimeout(()=>{ if(open||queue.length||!pendingAfter||S.busy||S.mode||document.getElementById('dwgRoot').innerHTML) return; const f=pendingAfter; pendingAfter=null; f(); }, 420); }
+function afterModals(fn){ pendingAfter=fn; tryAfter(); }
+function nextModal(){
+  const root=document.getElementById('dlgRoot');
+  open = queue.shift()||null;
+  if(!open){ root.innerHTML=''; tryAfter(); return; }
+  if(open.tone==='bad') Music.sfx('buzz'); else Music.sfx('pop');
+  const opts = open.opts || [{label:'了解'}];
+  const spk = getSpk(open.speaker||'master');
+  root.innerHTML = `<div class="dim"><div class="vn ${open.tone||''}">
+    <div class="portrait">${spkHTML(open.speaker||'master', open.mood)}</div>
+    <div class="nametag">${spk.name}</div>
+    ${open.title?`<h3>${open.title}</h3>`:''}${open.html||''}
+    <div class="opts">${opts.map((o,i)=>`<button class="opt" data-i="${i}"><span><b>${o.label}</b>${o.sub?`<small>${o.sub}</small>`:''}</span></button>`).join('')}</div>
+  </div></div>`;
+  root.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+    Music.sfx('click');
+    const o=opts[+b.dataset.i]; const ttl=(open&&open.title)||''; open=null; nextModal(); if(o.fn){ CTX=ttl.replace(/<[^>]+>/g,''); withFloats(o.fn); } render();
+  });
+}
+
+/* =========================================================
+   流程
+   ========================================================= */
+function startLevel(i){
+  document.getElementById('screenRoot').innerHTML='';
+  queue.length=0; open=null; pendingAfter=null; document.getElementById('dlgRoot').innerHTML='';
+  S=newState(i); lastLog=-1; setupLevel(); V3.reset(); V3.edit=false; V3.sel=null; V3.add=null; render(); intro();
+}
+function intro(){
+  const lv=L(), est=estimate();
+  S.est=est;
+  const quotes=[[1.08,88],[1.25,80],[1.42,66]].map(([m,s])=>[Math.round(est*m/10000)*10000, s]);
+  showModal({speaker:'client', title:lv.greet, html:`
+    <p>${lv.story}</p>
+    <div class="brief"><ul>${lv.brief.map(b=>`<li>${b}</li>`).join('')}<li>家具軟裝喜歡 <b>${lv.style}風</b>（另外報價）</li>${lv.extra.length?`<li>本案另含：<b>${lv.extra.map(id=>T[id].name).join('、')}</b></li>`:''}<li>希望 <b>${lv.deadline} 天</b>內完工</li></ul>
+    <div class="mechbox">${MECH[S.lv].ic} <b>本關特色：${MECH[S.lv].name}</b><br>${MECH[S.lv].desc}</div>
+    <div class="clientinfo"><span>業主個性：${PICKY[lv.picky]}</span><span>付款習慣：${PAYER[lv.payer]}</span><span>格局：${LY().name}・${LY().floors.length} 層</span></div>
+    <div style="font-size:13px;color:var(--muted);margin-top:6px">📜 尺寸、材料、燈位都在施工圖裡，開工後隨時可以從畫面右上角打開。</div></div>
+    <p>你估了一下，施工成本大約 <b style="color:var(--gold)">${fmt(est)}</b>${has('meter')?'（有雷射測距儀，估得很準）':'（實際可能有 ±8% 誤差）'}。要報多少？</p>
+    <p class="disc">※ ${DISCLAIMER}</p>`,
+    opts:quotes.map(([p,s],k)=>({label:`${['搶單價','合理價','高價'][k]} ${fmt(p)}`, sub:['業主很開心，但利潤很薄','業主可以接受','業主覺得貴，會比較挑剔'][k], fn:()=>start(p,s)}))});
+}
+function start(rev, s){
+  const lv=L();
+  S.revenue=rev; S.contract=rev; S.sat=clamp(s-4*lv.picky,0,100);
+  const dep=Math.round(rev*(S.lv<2?0.5:0.4)); S.received=dep; S.depAmt=dep; S.midAmt=Math.round(rev*(S.lv<2?0.3:0.4));
+  log(`簽約！合約 ${fmt(rev)}，收到訂金 ${fmt(dep)}`,'good');
+  chooseCrew();
+}
+function chooseCrew(){
+  const lv=L();
+  showModal({speaker:'master', title:'「這案子要找哪一班師傅？」', html:`<p>每班師傅工資、習慣都不一樣。${lv.crews.includes('clean')?'':'<b style="color:var(--bad)">這陣子阿明班被訂滿了。</b>'}</p>`,
+    opts:lv.crews.map(id=>{ const c=CREWS[id]; return {label:`${c.name}・${c.tag}`, sub:`工資 ×${c.mul.toFixed(2)}｜${c.desc}`, fn:()=>{ S.crew=id; log(`找 ${c.name} 來施工`); begin(); }}; })});
+}
+function begin(){
+  const lv=L();
+  mechStart();
+  if(lv.mode==='schedule'){
+    S.phase='play';
+    showModal({speaker:'master', title:lv.hintMax?'「這次換你自己決定工序了！」':'「這案子我不會來，你自己來！」', html:`
+      <p>這關的工項卡<b style="color:var(--gold)">不會提示前後順序</b>，也不會上鎖。每做完一項，你自己決定<b style="color:var(--gold)">下一個進場的工班</b>。</p>
+      <p>叫錯工班：前置工作還沒做，工班到現場<b style="color:var(--bad)">白跑一趟</b>；做完才發現順序錯，就要<b style="color:var(--bad)">返工</b>。</p>
+      ${S.lv>=3?'<p>從這關開始，<b style="color:var(--gold)">水電插座位置</b>也要你照 E-01 水電圖自己放樣。</p>':''}
+      ${lv.hintMax?`<p>這關可以問我 ${lv.hintMax} 次下一步。</p>`:''}`,
+      opts:[{label:'📜 先看施工圖', fn:()=>openDrawings('D01')},{label:'開工！'}]});
+  } else {
+    S.phase='play';
+    if(S.lv===0 && !PROG.tutDone){
+      showModal({speaker:'master', title:'教學 1／3：上面四格怎麼看', html:`<p>💰 <b style="color:var(--gold)">現金</b>＝已經收到的錢 − 已經花掉的錢。簽約先收<b>訂金</b>，做完 5 項收<b>中期款</b>，交屋收<b>尾款</b>。</p><p>⏱ <b style="color:var(--gold)">工期</b>：超過期限要付違約金。⭐ <b style="color:var(--gold)">品質</b>：返工、做錯會扣。😊 <b style="color:var(--gold)">滿意度</b>：業主開不開心，太低會被扣尾款。</p>`, opts:[{label:'下一步'}]});
+      showModal({speaker:'master', title:'教學 2／3：照圖施工', html:`<p>右上角 <b style="color:var(--gold)">📜 施工圖</b> 有拆除、平面、天花板、水電、地坪、施工說明六張圖。拆除、放隔間、放燈都要照圖點，選材料前也可以先翻圖。</p><p>放樣時<b>點格線附近就會自動吸附</b>，隔間可以<b>按住拖曳一次畫一整段</b>，點錯按「↶ 復原」。</p>`, opts:[{label:'下一步'}]});
+      showModal({speaker:'master', title:'教學 3／3：工項卡', html:`<p>下面這排是<b style="color:var(--gold)">工項卡</b>，點一張就開工。第一、二關鎖住的卡片代表前置工作還沒做；第三關起不再提示，要自己判斷順序。</p><p>不懂隨時按右上角 <b>❓ 說明</b>，或右下角問我。</p>`, opts:[{label:'開始！', fn:()=>{ PROG.tutDone=true; saveProg(); }}]});
+      return;
+    }
+    showModal({speaker:'master', title:S.lv===0?'「少年仔，開工囉！」':'「又接到新案子啦！」', html:`<p>做工程第一件事：<b style="color:var(--gold)">先把施工圖看熟</b>。尺寸、材料、燈位都寫在上面，放樣跟施作都要照圖。</p><p>下面這排是<b style="color:var(--gold)">工項卡</b>，點一張就開工，鎖住的卡片表示前置工作還沒做。${lv.hintCost?`這案子問我要付 <b style="color:var(--gold)">${fmt(lv.hintCost)}</b> 茶水費喔。`:'不知道下一步，右下角找我。'}</p><p style="font-size:13px;color:var(--muted)">畫面可以切換 3D／平面：3D 用滑鼠拖曳旋轉、滾輪縮放。</p>`, opts:[{label:'📜 先看施工圖', fn:()=>openDrawings('D01')},{label:'直接開工'}]});
+  }
+}
+function playCard(id, el){
+  if(S.busy || S.phase!=='play') return;
+  const t=T[id];
+  if(L().mode==='schedule'){ const need=needsOf(t); if(need.length){ idleVisit(id, need); return; } }
+  if(el) el.classList.add('playing');
+  Music.sfx('click');
+  setTimeout(()=>{
+    S.hist=[];
+    if(t.minigame==='demo'){ S.mode='demo'; S.demoSel=new Set(); S.floorView=L().work.floor; render(); return; }
+    if(id==='C' && S.lv>=3){ S.mode='wiring'; S.plugSel=new Set(); S.floorView=L().work.floor; render(); return; }
+    if(t.minigame==='lights'){ S.mode='lights'; S.lights=new Set(); S.floorView=L().work.floor; render(); return; }
+    if(t.minigame){ S.mode='wall'; S.walls=new Set(); S.floorView=L().work.floor; render(); return; }
+    if(t.choice){
+      const c=CHOICES[t.choice];
+      showModal({speaker:'master', title:`${LOOK[id].ic} ${t.name}`, html:`<p>${c.text()}</p>`, opts:[...c.opts.map(o=>{ const d=o.days?adjDays(id,o.days):adjDays(id,t.days);
+        const cs = id==='N' ? (o.cost?`家具 ${fmt(o.cost)}（業主付 ${fmt(Math.round(o.cost*1.25))}）`:'不賺不賠') : fmt(adjCost(id,o.cost));
+        return {label:o.label, sub:`${cs}・${d} 天・${o.note}`, fn:()=>runBuild(id,o)}; }), {label:'📜 先翻一下施工圖', sub:'看完回來再決定', fn:()=>openDrawings(DWG_FOR[id], ()=>playCard(id))}]});
+      render(); return;
+    }
+    runBuild(id,{});
+  }, el?280:0);
+}
+function runBuild(id, o){
+  const t=T[id], days=adjDays(id, o.days??t.days), dur=700+380*days;
+  S.busy=true; S.active=id; render(); V3.animate();
+  const ov=document.getElementById('build'), bar=document.getElementById('pbar'), bd=document.getElementById('bd');
+  document.getElementById('bic').textContent=LOOK[id].ic;
+  document.getElementById('bt').textContent=`${t.name} 施工中…`;
+  ov.classList.remove('hidden'); bar.style.transition='none'; bar.style.width='0';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ bar.style.transition=`width ${dur}ms linear`; bar.style.width='100%'; }));
+  let k=0; bd.textContent=`第 ${S.day} 天`;
+  const iv=setInterval(()=>{ k=Math.min(days,k+1); bd.textContent=`第 ${S.day+k} 天`; }, dur/Math.max(1,days));
+  const tok=S;
+  setTimeout(()=>{
+    clearInterval(iv); if(S!==tok || S.phase==='intro'){ ov.classList.add('hidden'); return; }
+    ov.classList.add('hidden'); S.active=null; S.busy=false; S.justDone=id;
+    withFloats(()=>finishTask(id,o)); render();
+    if(S.phase==='run') afterModals(runNext);
+  }, dur+80);
+}
+function finishTask(id, o){
+  const t=T[id], lv=L(), d0=S.day;
+  const varr = has('meter') ? .02 : .08;
+  const base = o.cost ?? t.cost;
+  let cost = Math.round(adjCost(id, base) * (1 + (Math.random()*2-1)*varr) / 100) * 100;
+  let days = adjDays(id, o.days ?? t.days);
+  const notes=[];
+  CTX=t.name;
+  RULES.filter(r=>r.should===id && S.done[r.before]).forEach(r=>{ spend(r.cost); S.costRework+=r.cost; addDays(r.days); q(-r.q); if(r.fx) r.fx(); notes.push(r.msg); S.reworks++; });
+  if(id==='B' && !S.done.A){ spend(10000); sat(-8); notes.push('沒先做保護工程，拆除時刮傷電梯跟公共走道，管委會開罰 NT$10,000。'); }
+  ({cost, days} = mechAdjust(id, cost, days, notes));
+  if(S.crew==='fast' && days>1 && Math.random()<.3){ days-=1; log('小黑班手腳快，提前一天完成','good'); }
+  spend(cost); S.costBuild+=cost; addDays(days);
+  if(o.apply) o.apply(notes);
+  if(id==='D' && has('laser')) q(2);
+  if((id==='F'||id==='G') && has('scaffold')) q(1);
+  if(id==='F'){
+    const want = lv.ceilReq==='flat' ? 'mix' : 'grid';
+    if(S.missedCeil.length){ spend(8000*S.missedCeil.length); addDays(1); notes.push(`${S.missedCeil.join('、')}的舊天花板當初沒拆，吊骨架前要再叫拆除班，多花 ${fmt(8000*S.missedCeil.length)}、1 天。`); S.missedCeil=[]; }
+    if(o.key!==want){
+      if(lv.ceilReq==='flat' && o.key==='grid'){ sat(-12); notes.push('業主看到客廳是格子天花板皺眉：「A-02 畫的是平頂暗架耶！」'); }
+      else if(o.key==='flat') notes.push('浴廁做成暗架：之後抽風機、管線要維修只能開孔，跟 A-02 的「浴廁明架」不符。');
+      else notes.push('施工圖畫的是明架，你做成暗架，多出來的工料業主不會多付。');
+    }
+  }
+  if(id==='M' && o.key!=='sound'){ S.flags.doorNoise=true; }
+  if(id==='N'){ if(o.key==='none'){ sat(-3); S.furniture=null; } else { const pay=Math.round(o.cost*1.25); S.revenue+=pay; S.extraRev+=pay; S.furniture=o.key; S.furn=genFurn(); if(o.key!==lv.style){ sat(-8); notes.push(`業主：「我喜歡的是${lv.style}風耶，這套不是我要的。」滿意度下降。`); } else log(`家具軟裝是業主喜歡的${lv.style}風，業主很開心`,'good'); } }
+  if(id==='H'){ S.paint=PAINTS[o.key]; if(o.key!==S.paintReq){ spend(15000); addDays(1); sat(-6); q(-3); S.reworks++; notes.push(`牆面顏色跟施工說明指定的「${S.paintReq}」不一樣，業主要求重刷，多花 NT$15,000、1 天。`); S.paint=PAINTS[S.paintReq]; } }
+  if(id==='K') S.debris=[];
+  S.done[id]=true; S.order.push(id); if(o.key) S.choices[id]=o.key;
+  mechAfter(id, d0, notes, o);
+  log(`${LOOK[id].ic} ${t.name} 完成${o.label?`（${o.label}）`:''}・${fmt(cost)}`, 'good');
+  notes.forEach(n=>log(n,'bad'));
+  if(notes.length) showModal({speaker:'master', mood:'angry', tone:'bad', title:'「唉呀，這樣要返工啦！」', html:notes.map(n=>`<p>${n}</p>`).join('')});
+  // 週轉利息
+  const cash=S.received-S.spent;
+  if(cash<0){
+    if(S.lv<2){ if(!S.flags.freeLoan){ S.flags.freeLoan=true; log('現金暫時不夠，新手期銀行先免息借你週轉','good'); } }
+    else { const fee=Math.max(300, Math.round(-cash*0.008/100)*100); spend(fee); S.interest+=fee; log(`現金不足，向銀行週轉，利息 ${fmt(fee)}`,'bad');
+      if(!PROG.toldInterest){ PROG.toldInterest=true; saveProg(); showModal({speaker:'master', title:'「現金不夠囉，要跟銀行借錢週轉！」', html:`<p>你手上的現金（已收款 − 已花費）變成負數了。從第三關起，每做一項工程都要付一點<b style="color:var(--gold)">週轉利息</b>。</p><p>怎麼避免：報價別太低、選便宜一點的工班、中期款被拖時可以停工催款。</p>`, opts:[{label:'了解'}]}); } }
+  }
+  if(t.final){ S.phase='ending'; const tk=S; setTimeout(()=>{ if(S===tk) endGame(); }, 500); return; }
+  if(S.order.length===5 && !S.midPaid) payMid();
+  const canEv = S.evCount < LV_MAXEV[S.lv] && S.order.length - S.lastEv >= 2;
+  let fired=false;
+  if(canEv && Math.random()<lv.eventP){
+    const pool=EVENTS.filter(e=>!S.fired[e.id] && S.lv>=e.minLv && (!e.cond||e.cond()));
+    if(pool.length){ const e=pool[Math.floor(Math.random()*pool.length)]; S.fired[e.id]=true; if(e.pre) e.pre(); fired=true; S.evCount++; S.lastEv=S.order.length;
+      showModal({speaker:e.spk, title:e.title, html:`<p>${e.text()}</p>`, opts:e.opts()}); }
+  }
+  if(!fired) crewTrait();
+}
+function payMid(){
+  const lv=L(), amt=S.midAmt;
+  S.midPaid=true;
+  const p=[0,.35,.6,.85][lv.payer];
+  if(Math.random()<p){
+    showModal({speaker:'client', title:'「這期款……下禮拜再給你好嗎？」', html:`<p>照合約，完成 5 項工程要付<b style="color:var(--gold)">中期款 ${fmt(amt)}</b>，但業主說最近周轉不過來。</p><p style="font-size:13px;color:var(--muted)">現金不夠時，每做一項都要付銀行週轉利息。</p>`,
+      opts:[{label:'好吧，等業主', sub:'款項延到交屋時才給（可能還會打折）', fn:()=>{ S.midLate=true; log('中期款被拖延','bad'); }},
+            {label:'停工催款', sub:'工期 +2 天、滿意度下降，但馬上拿到錢', fn:()=>{ addDays(2); sat(-6); S.received+=amt; S.midGot=amt; log(`停工催款，收到中期款 ${fmt(amt)}`,'good'); }}]});
+  } else { withFloats(()=>{ S.received+=amt; S.midGot=amt; }); log(`業主準時付了中期款 ${fmt(amt)}`,'good'); }
+}
+function crewTrait(){
+  const c=S.crew, wf=WF();
+  const spot=()=>{ const rs=wf.rooms.filter(r=>r.floor||r.ceil); const r=rs[Math.floor(Math.random()*rs.length)]; return [r.x+20+Math.random()*(r.w-40), r.y+20+Math.random()*(r.h-40)]; };
+  CTX=`工班：${c?CREWS[c].name:''}`;
+  if(c==='smoke' && Math.random()<.22){
+    S.debris.push({p:spot(), ch:'🚬'});
+    showModal({speaker:'client', mood:'angry', title:'「你們師傅怎麼在屋裡抽菸！」', html:'<p>業主一進門就聞到菸味，地上還有菸蒂。</p>', opts:[
+      {label:'道歉，請師傅到外面抽，買空氣清淨機', sub:'NT$3,000', fn:()=>{ spend(3000); sat(-2); S.debris=S.debris.filter(d=>d.ch!=='🚬'); log('現場菸蒂清乾淨了'); }},
+      {label:'打哈哈帶過', sub:'滿意度下降', fn:()=>{ sat(-6); log('業主對菸味很不滿','bad'); }}]});
+  } else if(c==='drink' && Math.random()<.2){
+    S.debris.push({p:spot(), ch:'🍺'});
+    if(Math.random()<.5) showModal({speaker:'crew2', title:'「老闆……我頭好痛……」', html:'<p>阿財班昨晚喝太多，今天整班宿醉沒來。</p>', opts:[{label:'唉，只好延一天', fn:()=>{ addDays(1); log('工班宿醉，停工 1 天','bad'); }}]});
+    else showModal({speaker:'crew2', title:'「歹勢歹勢，中午喝兩杯就……」', html:'<p>酒後施工，有一處收邊做歪了，要修補。</p>', opts:[{label:'修補，口頭警告', sub:'NT$2,000、品質 −5', fn:()=>{ spend(2000); q(-5); log('酒後施工失誤','bad'); }}]});
+  } else if(c==='fast' && Math.random()<.22){ q(-3); log('小黑班趕太快，收邊不夠細','bad');
+  } else if(c==='clean' && Math.random()<.2){ sat(2); log('業主看到工地很整齊，很放心','good'); }
+}
+/* ---------- 排程模式 ---------- */
+function confirmPlan(){
+  S.phase='run'; S.queue=[...S.plan];
+  log(`排程確認，共 ${S.plan.length} 項，開工！`,'good'); render();
+  afterModals(runNext);
+}
+function needsOf(t){
+  if(t.final) return curTasks().filter(x=>!x.optional && !x.final && !S.done[x.id]).map(x=>x.id);
+  return (t.need||[]).filter(n=>!S.done[n]);
+}
+function runNext(){
+  if(S.phase!=='run') return;
+  const id=S.queue.shift(); if(!id){ render(); return; }
+  S.cur=id;
+  const t=T[id];
+  if(id==='A' && S.done.B){ log('保護工程排在拆除之後，已經沒意義了，跳過','bad'); render(); afterModals(runNext); return; }
+  const need=needsOf(t);
+  if(need.length){
+    S.queue.push(id); S.idle++;
+    withFloats(()=>{ spend(5000); addDays(1); sat(-2); });
+    log(`排到「${t.name}」但 ${need.map(n=>T[n].name).join('、')} 還沒做，工班白跑一趟`,'bad');
+    showModal({speaker:'crew', mood:'sad', tone:'bad', title:'「老闆，這樣沒辦法施工啦！」', html:`<p>排程輪到「<b>${LOOK[id].ic} ${t.name}</b>」，但現場 <b style="color:var(--gold)">${need.map(n=>T[n].name).join('、')}</b> 還沒做，我們沒辦法動工。</p><p>工班白跑一趟：損失 NT$5,000、1 天，這項往後延。</p>`, opts:[{label:'好吧，先做下一項'}]});
+    render(); afterModals(runNext); return;
+  }
+  render(); playCard(id);
+}
+function mustBefore(a,b){
+  if((T[b].need||[]).includes(a)) return true;
+  if(T[b].final && !T[a].final) return true;
+  if(a==='A' && b==='B') return true;
+  return RULES.some(r=>r.should===a && r.before===b);
+}
+function planIssue(plan){
+  for(let i=0;i<plan.length;i++) for(let j=i+1;j<plan.length;j++)
+    if(mustBefore(plan[j],plan[i])) return `第 ${i+1} 項「${T[plan[i]].name}」排太前面了，應該排在「${T[plan[j]].name}」之後。`;
+  const miss=curTasks().filter(t=>!plan.includes(t.id) && !t.optional);
+  if(miss.length) return `排程看起來沒問題，但還有「${miss[0].name}」沒排進去。`;
+  if(!plan.includes('A')) return '順序都對了！不過保護工程沒排，拆除時會被管委會罰錢，建議排在最前面。';
+  return null;
+}
+function idleVisit(id, need){
+  const t=T[id]; S.idle++; CTX='工班白跑';
+  withFloats(()=>{ spend(5000); addDays(1); sat(-2); });
+  log(`叫了「${t.name}」但 ${need.map(n=>T[n].name).join('、')} 還沒做，工班白跑一趟`,'bad');
+  showModal({speaker:'crew', mood:'sad', tone:'bad', title:'「老闆，這樣沒辦法施工啦！」', html:`<p>你叫「<b>${LOOK[id].ic} ${t.name}</b>」的工班進場，但現場 <b style="color:var(--gold)">${need.map(n=>T[n].name).join('、')}</b> 還沒做，我們沒辦法動工。</p><p>工班白跑一趟：損失 NT$5,000、1 天。</p>`, opts:[{label:'好吧，我重新安排'}]});
+  render();
+}
+function confirmDemo(){
+  const wrong=S.demoItems.filter(d=>!d.must && S.demoSel.has(d.id)), missC=S.demoItems.filter(d=>d.kind==='ceil' && !S.demoSel.has(d.id));
+  S.mode=null; S.missedCeil=missC.map(d=>d.room);
+  runBuild('B', {apply:(notes)=>{
+    if(!wrong.length && !missC.length && S.demoItems.filter(d=>d.must&&!S.demoSel.has(d.id)).length===0){ sat(3); log('拆除範圍跟 D-01 拆除平面圖完全一致','good'); }
+    wrong.forEach(d=>{ spend(25000); sat(-8); q(-3); notes.push(`${d.room}的${d.label}在 D-01 上標的是「保留」，你拆掉了！要重新買、重新安裝，多花 NT$25,000。`); });
+    if(missC.length) log(`${missC.map(d=>d.room).join('、')}的舊天花板沒拆`,'bad');
+  }});
+}
+function confirmWiring(){
+  const tset=new Set(S.plugKeys), placed=[...S.plugSel];
+  const correct=placed.filter(k=>tset.has(k)).length, extra=placed.length-correct, missing=S.plugKeys.length-correct;
+  S.mode=null;
+  runBuild('C', {apply:(notes)=>{
+    if(!extra && !missing){ sat(3); log('插座位置跟 E-01 水電配置圖完全一致','good'); }
+    else { const errs=extra+missing; spend(2500*errs); q(-2*errs); sat(-2*errs);
+      notes.push(`插座有 ${errs} 處跟 E-01 水電圖不符（多拉 ${extra}、少拉 ${missing}），改管重拉多花 ${fmt(2500*errs)}。`); }
+  }});
+}
+/* ---------- 放樣確認 ---------- */
+function confirmWalls(){
+  const placed=[...S.walls], tset=new Set(S.target), doorSet=new Set(S.doors.map(d=>d.k));
+  const extra=placed.filter(k=>!tset.has(k)).length;
+  const gaps=S.target.filter(k=>!S.walls.has(k));
+  const wrongGap=gaps.filter(k=>!doorSet.has(k)).length, closedDoor=[...doorSet].filter(k=>S.walls.has(k)).length;
+  S.mode=null;
+  runBuild('D', {apply:(notes)=>{
+    if(!extra && !wrongGap && !closedDoor){ sat(4); log('放樣跟施工圖完全一致，門洞位置也對！','good'); return; }
+    if(!extra && gaps.length===S.doors.length && wrongGap){ spend(3000*wrongGap); q(-4*wrongGap); sat(-4*wrongGap); notes.push(`門洞位置跟 A-01 平面圖不一樣，業主要求改到圖上的位置，多花 ${fmt(3000*wrongGap)}。`); return; }
+    if(!extra && !gaps.length){ spend(4000*S.doors.length); q(-6); notes.push('隔間整圈封死沒留門洞！得切開重做門框。'); return; }
+    const errs=extra+Math.max(0, gaps.length-S.doors.length)+(closedDoor&&gaps.length>S.doors.length?0:0);
+    q(-4*Math.max(1,errs)); sat(-3*Math.max(1,errs)); spend(2000*Math.max(1,errs));
+    notes.push(`隔間有 ${Math.max(1,errs)} 段跟 A-01 平面配置圖不符，${roomNames()}的尺寸跟圖面不一樣，得拆掉重下。`);
+  }});
+}
+function confirmLights(){
+  const tset=new Set(S.lightsReq), placed=[...S.lights];
+  const correct=placed.filter(k=>tset.has(k)).length, extra=placed.length-correct, missing=S.lightsReq.length-correct;
+  S.mode=null;
+  runBuild('J', {apply:(notes)=>{
+    if(!extra && !missing){ sat(4); log('崁燈位置跟天花板圖一模一樣！','good'); }
+    else { const errs=extra+missing; spend(1500*errs); q(-2*errs); sat(-2*errs);
+      notes.push(`崁燈有 ${errs} 處跟 A-02 天花板圖不符（多開 ${extra}、少裝 ${missing}），補洞、重新開孔多花 ${fmt(1500*errs)}。`); }
+  }});
+}
+const MOTTO='口訣記起來：<b style="color:var(--gold)">先保護、再拆除；管線先走、板子後封；隔間先頂到樓板，再做天花板；油漆之後才鋪地板。</b>';
+function hint(){
+  if(S.busy) return;
+  const lv=L();
+  if(S.phase!=='play') return;
+  if(lv.mode==='schedule' && S.hints>=(lv.hintMax||0)){ showModal({speaker:'master', title:'「這案子你要自己來了！」', html:'<p>你已經是獨當一面的師傅了，工序自己決定。施工說明（G-00）多看兩眼。</p>'}); return; }
+  const go=()=>{ S.hints++;
+    const next=IDEAL.find(id=>!S.done[id] && !(id==='A'&&S.done.B));
+    const d=DWG_FOR[next]&&DWG_TABS.find(t=>t.id===DWG_FOR[next]);
+    showModal({speaker:'master', title:`「下一步先做 ${LOOK[next].ic} ${T[next].name} 比較順。」`, html:`${d?`<p>做之前先翻施工圖 <b style="color:var(--gold)">${d.no} ${d.name}</b>，照圖施作才不會被業主退貨。</p>`:''}<p>${MOTTO}</p>`, opts:[{label:'謝謝阿土伯！'}]}); };
+  if(lv.hintCost){
+    showModal({speaker:'master', title:'「要我指點，先請我喝個飲料啦！」', html:`<p>問一次 <b style="color:var(--gold)">${fmt(lv.hintCost)}</b>。</p>`, opts:[{label:`好，請阿土伯（${fmt(lv.hintCost)}）`, fn:()=>{ spend(lv.hintCost); setTimeout(go,50); }},{label:'算了，我自己想'}]});
+  } else go();
+}
+/* ---------- 結算 ---------- */
+function endGame(){
+  const lv=L(), issues=[]; CTX='驗收';
+  if(!S.flags.sound || S.flags.soundLeak){ sat(-12); issues.push(`${roomNames()}隔音不好，外面講話裡面聽得一清二楚。`); }
+  if(S.flags.mold){ q(-15); sat(-10); spend(12000); issues.push('浴室天花板用石膏板，三個月後受潮發霉，保固回修 NT$12,000。'); }
+  if(S.flags.leak){ q(-15); sat(-12); spend(15000); issues.push('浴室滲水沒處理，新天花板出現水漬，回頭補防水 NT$15,000。'); }
+  if(S.flags.termite){ q(-10); sat(-10); spend(18000); issues.push('白蟻只做表面處理，半年後又冒出來，保固處理 NT$18,000。'); }
+  if(S.flags.floorDirect && lv.needLevel){ q(-12); sat(-10); issues.push('地面沒整平，SPC 地板踩起來有空心聲、接縫翹起。'); }
+  if(S.flags.wetFlat){ q(-6); sat(-4); spend(4000); issues.push('浴廁天花板做成暗架，抽風機要維修只能挖孔，補維修孔 NT$4,000。'); }
+  if(S.flags.doorNoise){ sat(-8); issues.push('門不是隔音門，關起來還是聽得到外面的聲音。'); }
+  S.demoItems.filter(d=>d.kind==='fx'&&d.must&&!S.demoSel.has(d.id)).forEach(d=>{ sat(-5); spend(6000); issues.push(`${d.room}的${d.label}當初沒拆，業主要求拆掉，追加拆除清運 NT$6,000。`); });
+  mechEnd(issues);
+  if(S.crew==='clean'){ sat(3); q(2); }
+  if(has('vac')) sat(4);
+  const touch = lv.picky - (S.crew==='clean'?1:0) - (has('vac')?1:0);
+  if(touch>0){ spend(2500*touch); issues.push(`業主驗收時拿著手電筒挑出 ${touch} 處小瑕疵，補漆修補 ${fmt(2500*touch)}。`); }
+  if(S.idle) issues.push(`叫錯工班，白跑 ${S.idle} 次。`);
+  const late=Math.max(0,S.day-S.deadline), lateFee = lv.picky>=3||S.lv>=8 ? 10000 : 5000;
+  if(late){ spend(late*lateFee); sat(-4*late); issues.push(`逾期 ${late} 天，違約金 ${fmt(late*lateFee)}。`); }
+  else if(S.day<=S.deadline-2){ sat(5); issues.push(`提前 ${S.deadline-S.day} 天完工，業主很開心！`); }
+  // 收款
+  const finalAmt = S.contract - S.depAmt - S.midAmt + S.extraRev;
+  let collect = finalAmt + (S.midLate ? S.midAmt : 0);
+  let withheld=0;
+  if(lv.payer>=2 && S.sat<60) withheld += finalAmt*Math.min(.15,(60-S.sat)/100);
+  if(lv.payer>=3 && S.sat<70) withheld += finalAmt*0.05;
+  if(S.midLate && lv.payer>=3 && S.sat<60) withheld += S.midAmt*0.25;
+  withheld = Math.round(Math.min(withheld, S.contract*0.12)/1000)*1000;
+  if(withheld) issues.push(`業主以「不滿意」為由扣了 ${fmt(withheld)}（扣款上限是合約的 12%，滿意度 60 以上就不會扣）。`);
+  S.withheld=withheld; S.finGot=Math.max(0, collect-withheld) - (S.midLate?S.midAmt:0); if(S.midLate) S.midGot=S.midAmt;
+  S.received += Math.max(0, collect-withheld);
+  if(S.interest) issues.push(`現金週轉利息共 ${fmt(S.interest)}。`);
+  const profit=S.received-S.spent;
+  const pScore=clamp(profit/(S.revenue*0.25)*100,0,100);
+  const score=0.35*S.quality+0.35*S.sat+0.3*pScore;
+  let grade=score>=90?'S':score>=78?'A':score>=65?'B':score>=50?'C':'D';
+  const words={S:'完美交屋！業主主動幫你介紹新客戶',A:'漂亮交屋，口碑不錯',B:'順利交屋，還有進步空間',C:'勉強過關，業主有點微詞',D:'這案子賠了面子也賠了錢……'};
+  if(profit<0 && 'SAB'.includes(grade)){ grade='C'; issues.push('本案虧損：利潤是負的，評等最高只能拿 C。'); }
+  const pass = grade!=='D', rank='SABCD';
+  if(pass && (!PROG.best[S.lv] || rank.indexOf(grade)<rank.indexOf(PROG.best[S.lv]))) PROG.best[S.lv]=grade;
+  PROG.cash += profit; saveProg();
+  const hasNext = S.lv<LEVELS.length-1;
+  S.phase='end'; S.grade=grade; S.pass=pass;
+  S.result={grade,words,profit,issues,hasNext,pass};
+  Music.jingle(pass?'win':'lose');
+  showResult();
+}
+function breakdownHTML(){
+  const neg={}; S.satLog.filter(x=>x.n<0).forEach(x=>{ neg[x.ctx]=(neg[x.ctx]||0)+x.n; });
+  const top=Object.entries(neg).sort((a,b)=>a[1]-b[1]).slice(0,5);
+  const other=S.spent-S.costBuild-S.costRework-S.interest;
+  return `<div class="bd"><div><h4>💵 收支明細</h4><table>
+    <tr><td>訂金</td><td>${fmt(S.depAmt)}</td></tr><tr><td>中期款</td><td>${fmt(S.midGot)}</td></tr><tr><td>尾款（含追加）</td><td>${fmt(S.finGot)}</td></tr>
+    ${S.withheld?`<tr class="neg"><td>被扣款</td><td>−${fmt(S.withheld)}</td></tr>`:''}
+    <tr><td>施工成本</td><td>−${fmt(S.costBuild)}</td></tr><tr class="${S.costRework?'neg':''}"><td>返工費</td><td>−${fmt(S.costRework)}</td></tr>
+    <tr class="${other>0?'neg':''}"><td>事件／罰款／保固</td><td>−${fmt(other)}</td></tr><tr class="${S.interest?'neg':''}"><td>週轉利息</td><td>−${fmt(S.interest)}</td></tr></table></div>
+    <div><h4>😟 滿意度扣分來源</h4>${top.length?`<table>${top.map(([k,v])=>`<tr class="neg"><td>${k.replace(/[「」]/g,'')}</td><td>${v}</td></tr>`).join('')}</table>`:'<p>沒有扣分，業主超滿意！</p>'}</div></div>`;
+}
+function showResult(){
+  const {grade,words,profit,issues,hasNext,pass}=S.result, lv=L();
+  document.getElementById('screenRoot').innerHTML=`<div class="screen"><div class="result">
+    <div style="color:var(--muted);font-size:13px;letter-spacing:.2em;font-weight:700">${LV_NO[S.lv]}・${lv.name}・驗收結果</div>
+    <div class="stamp ${grade}">${grade}</div>
+    <div class="msg">${words[grade]}</div>
+    <div class="rgrid">
+      <div><span>💰 本案利潤</span><b style="color:${profit>=0?'var(--good)':'var(--bad)'}">${(profit/10000).toFixed(1)} 萬</b></div>
+      <div><span>⏱ 工期</span><b>${S.day}/${S.deadline}</b></div>
+      <div><span>🔁 返工／白跑</span><b>${S.reworks}／${S.idle}</b></div>
+      <div><span>⭐ 品質</span><b>${S.quality}</b></div>
+      <div><span>😊 滿意度</span><b>${S.sat}</b></div>
+      <div><span>🏢 公司資金</span><b>${(PROG.cash/10000).toFixed(1)} 萬</b></div>
+    </div>
+    ${issues.length?`<ul class="issues">${issues.map(i=>`<li>${i}</li>`).join('')}</ul>`:'<p>驗收零缺失！</p>'}
+    ${breakdownHTML()}
+    <div class="seq">${S.order.map((id,i)=>`<span>${i+1}. ${LOOK[id].ic} ${T[id].name}</span>`).join('')}</div>
+    ${hasNext?(pass?`<p style="color:var(--good);font-weight:700">🔓 ${LV_NO[S.lv+1]}「${LEVELS[S.lv+1].name}」已解鎖</p>`:'<p style="color:var(--bad);font-weight:700">要拿到 C 以上才能解鎖下一關</p>'):(pass?'<p style="color:var(--gold);font-weight:700">🏆 十關全破！你是真正的工地主任了</p>':'')}
+    <div class="rbtns">${hasNext&&(pass||PROG.all)?'<button class="btn" id="nextBtn">下一關 ▶</button>':''}<button class="btn sec" id="againBtn">重玩本關</button><button class="btn sec" id="shopBtn2">🧰 工具倉庫</button><button class="btn sec" id="menuBtn">關卡選單</button><button class="btn sec" id="seeHouse">看完成的房子</button></div>
+    <p class="disc">※ ${DISCLAIMER}</p>
+  </div></div>`;
+  const R=document.getElementById('screenRoot');
+  const nb=R.querySelector('#nextBtn'); if(nb) nb.onclick=()=>startLevel(S.lv+1);
+  R.querySelector('#againBtn').onclick=()=>startLevel(S.lv);
+  R.querySelector('#menuBtn').onclick=levelSelect;
+  R.querySelector('#shopBtn2').onclick=()=>shopScreen(levelSelect);
+  R.querySelector('#seeHouse').onclick=()=>{ R.innerHTML=''; render(); };
+  render();
+}
+
+function showHelp(){
+  showModal({speaker:'master', title:'❓ 遊戲說明', html:`
+  <p><b style="color:var(--gold)">付款</b>：訂金（前兩關 50%、之後 40%）→ 做完 5 項收中期款 → 交屋收尾款＋追加款。現金變負數時，第三關起每做一項要付週轉利息。</p>
+  <p><b style="color:var(--gold)">扣款</b>：業主滿意度低於 60，愛拖款的業主會扣尾款，最多扣合約的 12%。</p>
+  <p><b style="color:var(--gold)">評分</b>：品質 35% ＋ 滿意度 35% ＋ 利潤 30%。C 以上過關。</p>
+  <p><b style="color:var(--gold)">工序口訣</b>：先保護、再拆除；管線先走、板子後封；隔間先頂到樓板，再做天花板；油漆之後才鋪地板；門、系統櫃、家具最後進場。</p>
+  <p><b style="color:var(--gold)">放樣操作</b>：點格線附近會自動吸附；隔間可以按住拖曳連續畫；點錯按「↶ 復原」。完工後在平面圖點房間，可以換家具擺法。</p>
+  <p><b style="color:var(--gold)">本關特色：${MECH[S.lv].name}</b>：${MECH[S.lv].desc}</p>
+  <p><b style="color:var(--gold)">3D 擺家具</b>：家具進場後，在 3D 按「🛋 擺家具」，可以拖曳移動、旋轉、新增盆栽／單椅／立燈。</p>
+  <p class="disc">※ ${DISCLAIMER}</p>`, opts:[{label:'了解'}]});
+}
+
+/* ---------- 離開遊戲 ---------- */
+function leaveLevel(to){
+  queue.length=0; open=null; pendingAfter=null;
+  document.getElementById('dlgRoot').innerHTML=''; document.getElementById('dwgRoot').innerHTML='';
+  document.getElementById('build').classList.add('hidden');
+  S.mode=null; S.busy=false; S.phase='intro'; V3.edit=false; V3.sel=null; V3.add=null;
+  if(to==='title') titleScreen(); else levelSelect();
+  render();
+}
+function askExit(){
+  const playing = ['play','ending'].includes(S.phase) || S.mode;
+  showModal({speaker:'master', title:'「要先收工了嗎？」', html: playing
+    ? '<p>現在離開，<b style="color:var(--gold)">這一關的進度不會保存</b>（下次要重新開始）。公司資金、工具、已過關的紀錄都會保留。</p>'
+    : '<p>公司資金、工具、已過關的紀錄都會自動保存。</p>',
+    opts:[{label:'回關卡選單', fn:()=>leaveLevel('menu')},{label:'回到首頁', fn:()=>leaveLevel('title')},{label:'繼續玩'}]});
+}
+
+/* =========================================================
+   每關獨特機制
+   ========================================================= */
+const MECH = [
+  {id:'tutorial', ic:'🎓', name:'新手帶路', desc:'有教學、提示免費、銀行週轉免息。先熟悉看圖跟工序。'},
+  {id:'inspect', ic:'🔍', name:'交屋點交', desc:'新成屋開工前先點交：在平面圖上找出建商留下的 3 個瑕疵（裂縫、水漬、地面空心）。找到的由建商保固免費修，漏掉的之後要你自己出錢修。'},
+  {id:'noise', ic:'👵', name:'居家施工', desc:'阿嬤還住在家裡。吵的工項（拆除、輕隔間、封板、天花板、浴室、木作）不能連續兩項接著做，不然阿嬤會抗議。'},
+  {id:'milestone', ic:'📅', name:'分段交付', desc:'公司急著用會議室：第 16 天前要完成「輕隔間骨架＋隔間封板＋門」。趕不上要賠租會議室的錢；趕得上業主大加分。'},
+  {id:'hoist', ic:'🏗️', name:'吊料作業', desc:'透天沒電梯，重料要用吊車從窗戶吊上 2F。叫一趟吊車 NT$9,000，可供 3 項重料工程；沒料就只能人工扛（每項 +1 天、+NT$6,000）。'},
+  {id:'night', ic:'🌙', name:'夜間施工', desc:'商圈白天營業。吵的工項白天做會被隔壁店家投訴（罰 NT$3,000、滿意度下降）；開「夜間施工」不會被投訴，但工資 +20%。'},
+  {id:'visit', ic:'🧐', name:'業主突擊監工', desc:'業主會在第 6、12、18 天來巡工地。工地太亂會被罵，乾淨整齊會加分。每做一項都會變亂，記得在巡視前「現場整理」。'},
+  {id:'typhoon', ic:'🌀', name:'颱風季', desc:'氣象預報颱風快來了。颱風當天停工 1 天；如果那時正在做封板、天花板、油漆或地板，又沒做防颱準備，就會泡水重做。'},
+  {id:'overtime', ic:'⏩', name:'趕工模式', desc:'工期很趕，可以開「加班趕工」：每項少 1 天（最少 1 天），但工資 +20%、品質 −1。什麼時候開，自己決定。'},
+  {id:'changes', ic:'✏️', name:'兩輪設計變更', desc:'豪宅業主一定會改兩次：隔間做好後要求書房加大（A-01 改版、骨架重做）；油漆刷好後又要換顏色。業主付變更費，但工序要重新安排。'},
+];
+const MECH_NOISY = ['B','D','E','F','G','W','O'];
+const MECH_NIGHT = ['B','D','E','F','G','W','O','AC'];
+const MECH_HEAVY = ['D','E','F','G','I','S','W','O'];
+const mech = () => MECH[S.lv].id;
+
+function mechStart(){
+  const m=mech();
+  if(m==='inspect'){
+    const rooms=WF().rooms.filter(r=>r.floor||r.ceil);
+    const kinds=[{k:'crack',label:'牆面裂縫'},{k:'stain',label:'天花板水漬'},{k:'hollow',label:'地面空心'}];
+    const picks=[...rooms].sort(()=>Math.random()-.5).slice(0,3);
+    S.defects=picks.map((r,i)=>{ const cs=cellsOf(r.x,r.y,r.w,r.h).filter(c=>!(c[1]<r.y+40)); const c=cs[Math.floor(Math.random()*cs.length)]||[r.x+r.w/2,r.y+r.h/2]; return {...kinds[i], x:c[0]+(Math.random()*16-8), y:c[1]+(Math.random()*16-8), room:r.n, found:false}; });
+    S.mode='inspect'; S.hist=[];
+  }
+  if(m==='hoist'){ S.stock=0; S.fired.stairs=true; }
+  if(m==='night'){ S.night=false; }
+  if(m==='visit'){ S.visitDays=[6,12,18]; S.visitDone=[]; S.mess=0; }
+  if(m==='typhoon'){ S.typhoon=9+Math.floor(Math.random()*6); S.prepped=false; S.tyDone=false; S.fired.typhoon=true; }
+  if(m==='overtime'){ S.ot=false; }
+  if(m==='milestone'){ S.msDay=16; }
+  if(m==='changes'){ ['moveDoor','repaint','revert','redraw'].forEach(k=>S.fired[k]=true); }
+}
+function mechAdjust(id, cost, days, notes){
+  const m=mech();
+  if(m==='hoist' && MECH_HEAVY.includes(id)){
+    if(S.stock>0){ S.stock--; log(`用吊車吊上來的料施工（剩 ${S.stock} 趟料）`,'good'); }
+    else { days+=1; cost+=6000; q(-2); notes.push(`沒有吊料，${T[id].name}的材料只能人工一片一片扛上 2F：+1 天、+NT$6,000，師傅累到品質下降。`); }
+  }
+  if(m==='night'){
+    if(S.night) cost=Math.round(cost*1.2/100)*100;
+    else if(MECH_NIGHT.includes(id)){ CTX='隔壁店家投訴'; spend(3000); sat(-5); notes.push(`白天做「${T[id].name}」太吵，隔壁店家投訴影響生意，被罰 NT$3,000。`); CTX=T[id].name; }
+  }
+  if(m==='overtime' && S.ot){ cost=Math.round(cost*1.2/100)*100; days=Math.max(1,days-1); q(-1); }
+  return {cost, days};
+}
+function mechAfter(id, d0, notes, o){
+  const m=mech();
+  if(m==='noise'){
+    const noisy=MECH_NOISY.includes(id);
+    if(noisy && S.lastNoisy){ CTX='阿嬤抗議'; sat(-6); notes.push('阿嬤：「又在敲敲打打！連續兩天都這麼吵，我午覺都睡不著！」吵的工項中間要穿插安靜的工作。'); CTX=T[id].name; }
+    S.lastNoisy=noisy;
+  }
+  if(m==='milestone' && !S.msDone){
+    if(['D','E','M'].every(k=>S.done[k])){ S.msDone=true; if(!S.msFail){ CTX='分段交付'; sat(6); log(`會議室在第 ${S.day} 天就能用了，業主很滿意！`,'good'); } }
+    else if(S.day>S.msDay && !S.msFail){ S.msFail=true; CTX='分段交付'; spend(15000); sat(-10); notes.push(`會議室沒趕上第 ${S.msDay} 天啟用，公司只好另外租會議室，向你求償 NT$15,000。`); }
+  }
+  if(m==='visit'){
+    S.mess += (S.crew==='clean'?0:1) + (notes.length?2:0);
+    S.visitDays.forEach(v=>{ if(!S.visitDone.includes(v) && d0<v && S.day>=v){ S.visitDone.push(v); CTX='業主監工';
+      if(S.mess>=2 || S.debris.length){ sat(-8); notes.push(`第 ${v} 天業主突擊巡工地：「怎麼這麼亂！材料亂丟、灰塵到處都是！」`); }
+      else { sat(4); log(`第 ${v} 天業主來巡，工地乾乾淨淨，業主點頭`,'good'); } } });
+  }
+  if(m==='typhoon' && !S.tyDone && d0<S.typhoon && S.day>=S.typhoon){
+    S.tyDone=true; addDays(1); CTX='颱風';
+    if(['E','G','H','I'].includes(id) && !S.prepped){ spend(8000); q(-8); notes.push(`第 ${S.typhoon} 天颱風來襲，雨水灌進屋裡，正在做的「${T[id].name}」泡水，要局部重做 NT$8,000。`); }
+    else log(`第 ${S.typhoon} 天颱風來襲，停工一天${S.prepped?'，還好有做防颱準備':''}`, S.prepped?'good':'');
+  }
+  if(m==='changes'){
+    if(id==='D' && !S.chg1){
+      S.chg1=true;
+      S.nrOverride = L().newRooms.map((nr,i)=> i===0 ? {...nr, box:[nr.box[0],nr.box[1],nr.box[2],nr.box[3]+1], door:`h${nr.box[0]+2}_${nr.box[3]+1}`} : {...nr});
+      S._keep=true; setupLevel(); S._keep=false;
+      delete S.done.D; S.walls=new Set(); S.revenue+=30000; S.extraRev+=30000; S.deadline+=2; S.flags.rev1=true;
+      showModal({speaker:'client', title:'設計變更 第 1 輪：書房要加大！', html:`<p>「我太太說書房太小，往下加大一米。」</p><p><b style="color:var(--gold)">A-01 平面圖已改版（Rev.1）</b>，剛下好的骨架要拆掉、重新放樣（輕隔間骨架卡片回到手上）。崁燈位置也跟著變了。</p><p>業主付變更費 <b>NT$30,000</b>，期限延 2 天。</p>`, opts:[{label:'了解'},{label:'📜 看改版後的施工圖 A-01', fn:()=>openDrawings('A01')}]});
+    }
+    if(id==='H' && !S.chg2){
+      S.chg2=true;
+      const opts=Object.keys(PAINTS).filter(p=>p!==S.paintReq); S.paintReq=opts[Math.floor(Math.random()*opts.length)];
+      delete S.done.H; S.revenue+=15000; S.extraRev+=15000; S.deadline+=1; S.flags.redrawn=true;
+      showModal({speaker:'client', title:'設計變更 第 2 輪：顏色要換！', html:`<p>「刷好看了覺得不對，換成別的顏色。」</p><p><b style="color:var(--gold)">G-00 施工說明已改版</b>，新顏色寫在上面。批土油漆卡片回到手上，已經做好的地板、門、燈具重刷時可能要返工。</p><p>業主付變更費 <b>NT$15,000</b>，期限延 1 天。</p>`, opts:[{label:'了解'},{label:'📜 看改版後的施工圖 G-00', fn:()=>openDrawings('G00')}]});
+    }
+  }
+}
+function mechEnd(issues){
+  if(mech()==='inspect'){ const miss=(S.defects||[]).filter(d=>!d.found);
+    if(miss.length){ CTX='點交漏項'; spend(8000*miss.length); sat(-3*miss.length); issues.push(`點交時漏掉 ${miss.map(d=>d.label).join('、')}，建商不認帳，自己修 ${fmt(8000*miss.length)}。`); } }
+}
+function confirmInspect(){
+  const found=S.defects.filter(d=>d.found);
+  S.mode=null;
+  if(found.length){ CTX='交屋點交'; sat(2*found.length); }
+  log(`點交完成：找到 ${found.length}/3 個建商瑕疵，交給建商保固修繕`, found.length===3?'good':'');
+  showModal({speaker:'designer', title:`點交結果：${found.length}／3`, html:`<p>${found.length===3?'三個瑕疵都抓到了，建商會免費修好。':`漏掉了 ${3-found.length} 個瑕疵，交屋後建商就不認帳了，到時要自己修。`}</p>`, opts:[{label:'開始施工'}]});
+  render();
+}
+function mechAction(a){
+  if(a==='hoist'){ withFloats(()=>{ spend(9000); S.stock+=3; }); log('叫吊車吊料，備好 3 項重料工程的材料','good'); }
+  if(a==='night'){ S.night=!S.night; log(S.night?'改成夜間施工（工資 +20%）':'改回白天施工'); }
+  if(a==='clean'){ withFloats(()=>{ spend(2000); S.mess=0; S.debris=[]; }); log('現場整理乾淨了','good'); }
+  if(a==='prep'){ withFloats(()=>{ spend(4000); S.prepped=true; }); log('完成防颱準備：封窗、板材墊高','good'); }
+  if(a==='ot'){ S.ot=!S.ot; log(S.ot?'開啟加班趕工（工資 +20%、每項少 1 天）':'關閉加班趕工'); }
+  Music.sfx('click'); render();
+}
+function mechBar(){
+  const m=MECH[S.lv]; if(S.phase!=='play') return '';
+  let st='', btn='';
+  if(m.id==='noise') st = S.lastNoisy ? '⚠️ 上一項很吵，下一項最好做安靜的工作' : '😴 現在阿嬤很平靜';
+  if(m.id==='milestone') st = S.msDone ? '✅ 會議室已完成' : S.msFail ? '❌ 會議室沒趕上' : `會議室進度：${['D','E','M'].map(k=>`${S.done[k]?'✅':'⬜'}${T[k].name}`).join(' ')}・期限第 ${S.msDay} 天`;
+  if(m.id==='hoist'){ st=`吊料存量：${S.stock} 趟`; btn=`<button class="btn sec" data-mact="hoist">🏗️ 叫吊車（NT$9,000／3 項）</button>`; }
+  if(m.id==='night'){ st=S.night?'🌙 夜間施工中（工資 +20%）':'☀️ 白天施工（吵的工項會被投訴）'; btn=`<button class="btn ${S.night?'':'sec'}" data-mact="night">${S.night?'切回白天':'切換夜間施工'}</button>`; }
+  if(m.id==='visit'){ const nv=S.visitDays.find(v=>!S.visitDone.includes(v)); st=`下次巡視：${nv?`第 ${nv} 天`:'沒有了'}・工地髒亂度 ${'🟫'.repeat(Math.min(5,S.mess))||'✨乾淨'}`; btn=`<button class="btn sec" data-mact="clean">🧹 現場整理（NT$2,000）</button>`; }
+  if(m.id==='typhoon'){ st=S.tyDone?'颱風已過':`🌀 預報：第 ${S.typhoon} 天颱風來襲${S.prepped?'・✅ 已做防颱':''}`; if(!S.prepped&&!S.tyDone) btn=`<button class="btn sec" data-mact="prep">🌀 防颱準備（NT$4,000）</button>`; }
+  if(m.id==='overtime'){ st=S.ot?'⏩ 加班趕工中：每項少 1 天、工資 +20%':'正常上班'; btn=`<button class="btn ${S.ot?'':'sec'}" data-mact="ot">${S.ot?'關閉加班':'開啟加班趕工'}</button>`; }
+  if(m.id==='changes') st = `變更進度：${S.chg1?'✅':'⬜'} 第 1 輪（隔間後）　${S.chg2?'✅':'⬜'} 第 2 輪（油漆後）`;
+  if(m.id==='inspect') st = S.defects ? `點交：找到 ${S.defects.filter(d=>d.found).length}／3` : '';
+  if(m.id==='tutorial') st = '有不懂的按右上角 ❓ 說明';
+  return `<div class="mechbar"><span class="mtag">${m.ic} 本關特色：${m.name}</span><span class="mst">${st}</span>${btn}</div>`;
+}
+
+/* =========================================================
+   背景音樂與音效（WebAudio 即時合成，不需外部音檔）
+   ========================================================= */
+const mtof = n => 440*Math.pow(2,(n-69)/12);
+const SONGS = {
+  // 選單：輕鬆 C 大調
+  menu:{bpm:92, chords:[[60,64,67],[57,60,64],[53,57,60],[55,59,62]],
+    bass:[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0], arp:[0,null,1,null,2,null,1,null,0,null,1,null,2,null,3,null],
+    kick:[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], hat:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0]},
+  // 施工中：輕快，施工動畫時加入鐵鎚節奏
+  work:{bpm:116, work:true, chords:[[53,57,60],[55,59,62],[52,55,59],[57,60,64]],
+    bass:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], arp:[0,1,2,1,3,1,2,1,0,1,2,1,4,2,1,2],
+    kick:[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0], snare:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], hat:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0]},
+  // 緊張：工期快到了或業主快抓狂
+  tense:{bpm:134, work:true, chords:[[57,60,64],[53,57,60],[50,53,57],[52,56,59]],
+    bass:[1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1], arp:[0,null,2,null,0,null,3,null,0,null,2,null,4,null,3,null],
+    kick:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], snare:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1], hat:[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]},
+};
+const Music = {
+  ctx:null, master:null, mode:null, step:0, next:0, timer:null, noiseBuf:null,
+  init(){
+    if(this.ctx){ if(this.ctx.state==='suspended') this.ctx.resume(); return; }
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+      this.ctx=new AC(); this.master=this.ctx.createGain(); this.master.gain.value=PROG.mute?0:0.5;
+      const comp=this.ctx.createDynamicsCompressor(); this.master.connect(comp); comp.connect(this.ctx.destination);
+      const len=Math.floor(this.ctx.sampleRate*0.5); this.noiseBuf=this.ctx.createBuffer(1,len,this.ctx.sampleRate);
+      const d=this.noiseBuf.getChannelData(0); for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+      this.timer=setInterval(()=>this.tick(),25);
+      if(this.ctx.state==='suspended') this.ctx.resume();
+    }catch(e){ this.ctx=null; }
+  },
+  setMode(m){ if(this.mode===m) return; this.mode=m; this.step=0; if(this.ctx) this.next=this.ctx.currentTime+0.08; },
+  toggle(){ PROG.mute=!PROG.mute; saveProg(); if(this.master) this.master.gain.setTargetAtTime(PROG.mute?0:0.5,this.ctx.currentTime,.05); },
+  tick(){
+    if(!this.ctx||!this.mode||!SONGS[this.mode]||this.ctx.state!=='running') return;
+    const M=SONGS[this.mode], spb=60/M.bpm/4;
+    if(this.next<this.ctx.currentTime) this.next=this.ctx.currentTime+0.02;
+    while(this.next<this.ctx.currentTime+0.15){ this.playStep(M,this.step,this.next,spb); this.next+=spb; this.step++; }
+  },
+  tone(type,f,t,dur,vol,opt={}){
+    const c=this.ctx, o=c.createOscillator(), g=c.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t); if(opt.slide) o.frequency.exponentialRampToValueAtTime(opt.slide,t+dur);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+(opt.a||0.01)); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    let node=o; if(opt.lp){ const fl=c.createBiquadFilter(); fl.type='lowpass'; fl.frequency.value=opt.lp; o.connect(fl); node=fl; }
+    node.connect(g); g.connect(this.master); o.start(t); o.stop(t+dur+0.05);
+  },
+  noise(t,dur,vol,ftype,freq,qv=1){
+    const c=this.ctx, s=c.createBufferSource(); s.buffer=this.noiseBuf;
+    const f=c.createBiquadFilter(); f.type=ftype; f.frequency.value=freq; f.Q.value=qv;
+    const g=c.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    s.connect(f); f.connect(g); g.connect(this.master); s.start(t); s.stop(t+dur+.02);
+  },
+  playStep(M,step,t,spb){
+    const s=step%16, ch=M.chords[Math.floor(step/16)%M.chords.length];
+    if(s===0) ch.forEach(n=>this.tone('triangle', mtof(n), t, spb*16*0.95, 0.03, {a:0.25, lp:1600}));
+    if(M.bass[s]) this.tone('triangle', mtof(ch[0]-12), t, spb*1.8, 0.15, {lp:600});
+    if(M.arp[s]!=null){ const notes=[...ch, ch[0]+12, ch[1]+12]; this.tone('square', mtof(notes[M.arp[s]%notes.length]+12), t, spb*0.9, 0.025, {lp:2400}); }
+    if(M.kick[s]) this.tone('sine',150,t,.18,.3,{slide:45});
+    if(M.snare && M.snare[s]) this.noise(t,.12,.14,'bandpass',1800,.8);
+    if(M.hat[s]) this.noise(t,.035,.05,'highpass',7000);
+    if(M.work && S && S.busy && (s%4===0 || s===6 || s===14)){ this.noise(t,.07,.3,'bandpass',2600,3); this.tone('sine',220,t,.08,.16,{slide:90}); }
+  },
+  sfx(name){
+    if(!this.ctx||PROG.mute||this.ctx.state!=='running') return; const t=this.ctx.currentTime+0.01;
+    if(name==='click') this.tone('square',880,t,.05,.04);
+    if(name==='pop') this.tone('triangle',660,t,.08,.05,{slide:990});
+    if(name==='ding'){ this.tone('triangle',1318,t,.25,.08); this.tone('triangle',1760,t+.08,.35,.07); }
+    if(name==='buzz'){ this.tone('sawtooth',140,t,.25,.07,{lp:900}); this.tone('sawtooth',133,t+.12,.3,.06,{lp:900}); }
+    if(name==='paper') this.noise(t,.18,.1,'bandpass',3000,.6);
+    if(name==='cash'){ [1046,1318,1568,2093].forEach((f,i)=>this.tone('square',f,t+i*.06,.12,.04,{lp:4000})); }
+  },
+  jingle(kind){
+    if(!this.ctx) return; this.mode=null; const t=this.ctx.currentTime+.05;
+    const seq = kind==='win'?[60,64,67,72,76,79,84]:[67,63,60,55,51];
+    seq.forEach((n,i)=>this.tone('square',mtof(n),t+i*.12,.3,.05,{lp:3000}));
+    if(kind==='win') [60,64,67,72].forEach(n=>this.tone('triangle',mtof(n),t+seq.length*.12,1.4,.04,{a:.05}));
+    clearTimeout(this._jt); this._jt=setTimeout(()=>{ if(!this.mode) this.setMode('menu'); }, 2600);
+  },
+};
+
+/* =========================================================
+   角色頭像
+   ========================================================= */
+const LOOK = {
+  A:{ic:'🛡️', band:'#6b7c85', cat:'前置'}, B:{ic:'🔨', band:'#8a5a3b', cat:'拆除'},
+  C:{ic:'⚡', band:'#e8590c', cat:'水電'}, D:{ic:'📐', band:'#4a6b7a', cat:'輕隔間'},
+  E:{ic:'🧱', band:'#4a6b7a', cat:'輕隔間'}, F:{ic:'🏗️', band:'#5b6fa8', cat:'天花板'},
+  G:{ic:'🔲', band:'#5b6fa8', cat:'天花板'}, H:{ic:'🎨', band:'#9b4f8a', cat:'油漆'},
+  I:{ic:'🪵', band:'#a87a3d', cat:'地板'}, J:{ic:'💡', band:'#c9a33a', cat:'燈具'},
+  W:{ic:'🛁', band:'#3a7ca5', cat:'浴室'}, AC:{ic:'❄️', band:'#58a6e0', cat:'冷氣'}, O:{ic:'🪚', band:'#8a6d4b', cat:'木作'}, S:{ic:'🗄️', band:'#6b7c85', cat:'系統櫃'},
+  M:{ic:'🚪', band:'#7a5a40', cat:'門'}, N:{ic:'🛋️', band:'#6f9fb5', cat:'軟裝'},
+  K:{ic:'🏁', band:'#2f7d4f', cat:'交屋'},
+};
+function avatar(o){
+  const mouth = o.mood==='sad' ? 'M43 62 Q50 57 57 62' : o.mood==='angry' ? 'M43 61 H57' : 'M42 58 Q50 65 58 58';
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%"><rect width="100" height="100" fill="${o.bg}"/>
+  ${o.long?`<path d="M22 56 Q18 16 50 15 Q82 16 78 56 L82 96 L18 96Z" fill="${o.hair}"/>`:''}
+  <path d="M18 104 Q22 74 50 72 Q78 74 82 104Z" fill="${o.shirt}"/>
+  <rect x="43" y="60" width="14" height="15" fill="${o.skin}"/>
+  <ellipse cx="50" cy="46" rx="20" ry="23" fill="${o.skin}"/>
+  ${o.long?`<path d="M30 40 Q34 20 52 22 Q68 22 71 42 Q60 30 46 32 Q36 34 30 40Z" fill="${o.hair}"/>`:''}
+  ${(!o.long&&!o.hat)?`<path d="M30 42 Q28 20 50 20 Q72 20 70 42 Q66 30 50 30 Q36 30 30 42Z" fill="${o.hair}"/>`:''}
+  ${o.mood==='angry'?`<path d="M38 40 L46 43 M62 40 L54 43" stroke="#1f2a2e" stroke-width="2.5" stroke-linecap="round"/>`:''}
+  <circle cx="42" cy="47" r="2.8" fill="#1f2a2e"/><circle cx="58" cy="47" r="2.8" fill="#1f2a2e"/>
+  ${o.glasses?`<circle cx="42" cy="47" r="7" fill="none" stroke="#1f2a2e" stroke-width="2"/><circle cx="58" cy="47" r="7" fill="none" stroke="#1f2a2e" stroke-width="2"/><path d="M49 47 H51" stroke="#1f2a2e" stroke-width="2"/>`:''}
+  ${o.blush?`<circle cx="36" cy="55" r="3.5" fill="#f19a8f" opacity=".7"/><circle cx="64" cy="55" r="3.5" fill="#f19a8f" opacity=".7"/>`:''}
+  ${o.mustache?`<path d="M40 56 Q50 52 60 56 Q50 59 40 56Z" fill="#8d8d8d"/>`:''}
+  <path d="${mouth}" stroke="#1f2a2e" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  ${o.cig?`<rect x="55" y="58" width="15" height="3" fill="#fff" stroke="#bbb" stroke-width=".5"/><rect x="69" y="58" width="3" height="3" fill="#ff5a1a"/><path d="M72 55 Q76 50 72 46 Q68 42 73 37" stroke="#aaa" stroke-width="1.5" fill="none" opacity=".8"/>`:''}
+  ${o.hat?`<path d="M27 38 Q28 16 50 15 Q72 16 73 38Z" fill="${o.hat}" stroke="rgba(0,0,0,.15)"/><rect x="22" y="35" width="56" height="7" rx="3.5" fill="${o.hat}" stroke="rgba(0,0,0,.15)"/><rect x="47" y="15" width="6" height="21" fill="rgba(0,0,0,.1)"/>`:''}
+  </svg>`;
+}
+const SPK = {
+  master:{name:'老師傅 阿土伯', look:{bg:'#ffe39a', skin:'#e2b48c', hair:'#999', shirt:'#2f5d50', hat:'#ffc94a', mustache:true}},
+  neighbor:{name:'鄰居 王先生', look:{bg:'#d4e3c3', skin:'#eac3a0', hair:'#2a2a2a', shirt:'#8a5a7a', glasses:true, mood:'angry'}},
+  supplier:{name:'板材行 陳老闆', look:{bg:'#cfe0ea', skin:'#d9a985', hair:'#1f1f1f', shirt:'#c0563b', mood:'sad'}},
+  designer:{name:'設計師 Amy', look:{bg:'#e3f0d8', skin:'#f3d2b8', hair:'#5a3a2a', shirt:'#2b3438', long:true, glasses:true}},
+  guard:{name:'管委會主委', look:{bg:'#e8e8f0', skin:'#e2b48c', hair:'#555', shirt:'#2b4a7a', glasses:true, mood:'angry'}},
+  defaultCrew:{name:'工班 小黑', look:{bg:'#ffd2b0', skin:'#b98560', hair:'#111', shirt:'#3a4c55', hat:'#ff7a1a'}},
+};
+function getSpk(key){
+  if(key==='client') return {name:`業主 ${L().client}`, look:L().look};
+  if(key==='crew'||key==='crew2') return S && S.crew ? {name:`${CREWS[S.crew].name}`, look:CREWS[S.crew].look} : SPK.defaultCrew;
+  return SPK[key] || SPK.master;
+}
+function spkHTML(key, mood){ const s=getSpk(key); const look = mood?{...s.look, mood}:s.look; return avatar(look); }
+
+/* =========================================================
+   施工圖
+   ========================================================= */
+const DWG_TABS=[{id:'D01',no:'D-01',name:'拆除平面圖'},{id:'A01',no:'A-01',name:'平面配置圖'},{id:'A02',no:'A-02',name:'天花板配置圖'},{id:'E01',no:'E-01',name:'水電配置圖'},{id:'A03',no:'A-03',name:'地坪配置圖'},{id:'G00',no:'G-00',name:'施工說明'}];
+const DWG_FOR={W:'G00',AC:'E01',O:'A02',S:'G00',B:'D01',D:'A01',E:'A01',M:'A01',F:'A02',G:'A02',H:'G00',I:'A03',J:'A02',C:'E01',A:'G00',N:'G00'};
+let dwgTab='D01', dwgCb=null;
+function floorBounds(f){ const rs=LY().floors[f].rooms; return {x1:Math.max(...rs.map(r=>r.x+r.w)), y1:Math.max(...rs.map(r=>r.y+r.h))}; }
+function dimLine(x1,y1,x2,y2,label,vert){
+  const c='#ffd56b'; const tick=(x,y)=>`<line x1="${x-4}" y1="${y+4}" x2="${x+4}" y2="${y-4}" stroke="${c}" stroke-width="1.5"/>`;
+  let s=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="1"/>`+tick(x1,y1)+tick(x2,y2);
+  const mx=(x1+x2)/2, my=(y1+y2)/2;
+  s+= vert ? `<text x="${x1-5}" y="${my}" font-size="11" fill="${c}" text-anchor="middle" transform="rotate(-90 ${x1-5} ${my})">${label}</text>`
+           : `<text x="${mx}" y="${y1-5}" font-size="11" fill="${c}" text-anchor="middle">${label}</text>`;
+  return s;
+}
+function doorSVG(k, swing, col){
+  const [x1,y1,x2,y2]=edgeXY(k);
+  if(swing==='down') return `<line x1="${x1}" y1="${y1}" x2="${x1}" y2="${y1+40}" stroke="${col}" stroke-width="2"/><path d="M${x2} ${y1} A40 40 0 0 1 ${x1} ${y1+40}" fill="none" stroke="${col}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  return `<line x1="${x1}" y1="${y2}" x2="${x1+40}" y2="${y2}" stroke="${col}" stroke-width="2"/><path d="M${x1} ${y1} A40 40 0 0 1 ${x1+40} ${y2}" fill="none" stroke="${col}" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+}
+function partitionLines(col,w,skipDoors){
+  const ds=new Set(S.doors.map(d=>d.k));
+  return S.target.filter(k=>!skipDoors||!ds.has(k)).map(k=>{ const [a,b,c,d]=edgeXY(k); return `<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="${col}" stroke-width="${w}" stroke-linecap="square"/>`; }).join('');
+}
+function axes(col, b){
+  let s=''; for(let i=0;i<=(b.x1-20)/40;i++) s+=`<text x="${20+40*i}" y="-8" font-size="10.5" fill="${col}" text-anchor="middle" font-weight="700">${i}</text>`;
+  for(let j=0;j<=(b.y1-20)/40;j++) s+=`<text x="-11" y="${24+40*j}" font-size="10.5" fill="${col}" text-anchor="middle" font-weight="700">${j}</text>`;
+  return s+`<text x="${b.x1+8}" y="-8" font-size="9" fill="${col}">m</text>`;
+}
+function autoDims(){
+  const g=GR(), out=[];
+  const xs=[...new Set([g.x, g.x+g.w, ...S.newRooms.flatMap(r=>[r.x0,r.x1])])].sort((a,b)=>a-b);
+  const ys=[...new Set([g.y, g.y+g.h, ...S.newRooms.flatMap(r=>[r.y0,r.y1])])].sort((a,b)=>a-b);
+  for(let i=0;i<xs.length-1;i++) out.push([xs[i],-12,xs[i+1],-12,String((xs[i+1]-xs[i])*25)]);
+  for(let i=0;i<ys.length-1;i++) out.push([-14,ys[i],-14,ys[i+1],String((ys[i+1]-ys[i])*25),1]);
+  S.newRooms.forEach(r=>{ const [x1,y1,x2,y2]=edgeXY(r.door);
+    if(y1===y2){ const yy = r.y1===y1 ? y1-12 : y1+18; [[r.x0,x1],[x1,x2],[x2,r.x1]].forEach(([a,b])=>{ if(b>a) out.push([a,yy,b,yy,String((b-a)*25)]); }); }
+    else { const xx = r.x1===x1 ? x1-12 : x1+16; [[r.y0,y1],[y1,y2],[y2,r.y1]].forEach(([a,b])=>{ if(b>a) out.push([xx,a,xx,b,String((b-a)*25),1]); }); }
+  });
+  return out;
+}
+function roomLabelPos(r){ const g=GR(); if(r===g) return L().mainLabel; return [r.x+r.w/2, r.y+17]; }
+function drawingSVG(tab){
+  const W='#e8f1f8', N='#ff9b8a', Y='#ffd56b', info=DWG_TABS.find(t=>t.id===tab), lv=L(), wf=WF(), b=floorBounds(lv.work.floor);
+  const VW=b.x1+100, VH=b.y1+170;
+  let s=`<svg viewBox="-50 -50 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg">
+  <defs><pattern id="bpg" width="40" height="40" patternUnits="userSpaceOnUse" x="20" y="20"><path d="M40 0H0V40" fill="none" stroke="rgba(255,255,255,.1)"/></pattern>
+  <pattern id="bph" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V8" stroke="rgba(255,213,107,.45)" stroke-width="1.2"/></pattern>
+  <pattern id="bpm" width="24" height="24" patternUnits="userSpaceOnUse" x="20" y="20"><path d="M24 0H0V24" fill="none" stroke="rgba(232,241,248,.55)"/></pattern>
+  <pattern id="bps" width="12" height="40" patternUnits="userSpaceOnUse"><path d="M0 0V40" stroke="rgba(232,241,248,.5)"/></pattern></defs>
+  <rect x="-50" y="-50" width="${VW}" height="${VH}" fill="#174a73"/>
+  <rect x="20" y="20" width="${b.x1-20}" height="${b.y1-20}" fill="url(#bpg)"/>`;
+  wf.rooms.filter(r=>r.stair).forEach(r=>{ s+=`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="url(#bps)"/><text x="${r.x+r.w/2}" y="${r.y+r.h/2+30}" font-size="10" fill="${W}" text-anchor="middle" opacity=".7">UP ↑</text>`; });
+  const notes=[];
+  const newLabels=()=>S.newRooms.map(r=>`<text x="${(r.x0+r.x1)/2}" y="${r.y0+17}" font-size="13" font-weight="700" fill="${W}" text-anchor="middle">${r.name}</text>`).join('');
+  if(tab==='D01'){
+    S.demoItems.forEach(d=>{ const r=wf.rooms.find(x=>x.n===d.room);
+      if(d.kind==='ceil'){ s+=`<rect x="${r.x+3}" y="${r.y+3}" width="${r.w-6}" height="${r.h-6}" fill="rgba(255,90,79,.18)" stroke="${N}" stroke-dasharray="6 4"/><text x="${r.x+42}" y="${r.y+r.h-12}" font-size="10.5" fill="${N}" text-anchor="middle">拆除舊天花板</text>`; }
+      else { const [x,y,w,h]=d.rect;
+        s+= d.must ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(255,90,79,.35)" stroke="${N}" stroke-width="2"/><path d="M${x} ${y}L${x+w} ${y+h}M${x+w} ${y}L${x} ${y+h}" stroke="${N}" stroke-width="1.5"/><text x="${x+w/2}" y="${y+h+12}" font-size="10.5" fill="${N}" text-anchor="middle">拆除${d.label}</text>`
+                   : `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${W}" stroke-width="2"/><text x="${x+w/2}" y="${y+h+12}" font-size="10.5" fill="${W}" text-anchor="middle">保留${d.label}</text>`; } });
+    notes.push('<b>紅色虛線／紅色叉</b>：拆除（含廢料清運）','<b>白色框</b>：保留，拆除時要做好保護','拆除前須完成公共區域保護工程');
+  }
+  if(tab==='A01'){
+    s+=partitionLines(N,6,true)+S.doors.map(d=>doorSVG(d.k,d.swing,N)).join('')+newLabels();
+    autoDims().forEach(d=>{ s+=dimLine(...d); });
+    notes.push('① 新作輕隔間：C-75 型鋼，<b>頂天至樓板</b>','② 內填 60K 隔音棉，雙面封 9mm 板',`③ 門洞寬 1000，<b>位置依圖</b>；門片一律<b>隔音門</b>（共 ${S.doors.length} 樘）`);
+  }
+  if(tab==='A02'){
+    s+=partitionLines(W,3,true)+axes(Y,b);
+    const flat=lv.ceilReq==='flat';
+    wf.rooms.filter(r=>r.ceil && !r.wet).forEach(r=>{ if(!flat) s+=`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="url(#bpm)"/>`; s+=`<text x="${r.x+r.w/2}" y="${r.y+r.h-10}" font-size="10.5" fill="${Y}" text-anchor="middle">${flat?'暗架平頂 CH 270':'明架 60×60'}</text>`; });
+    wf.rooms.filter(r=>r.wet).forEach(r=>{ s+=`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="url(#bpm)"/><text x="${r.x+r.w/2}" y="${r.y+r.h-10}" font-size="10.5" fill="${Y}" text-anchor="middle">明架防潮</text>`; });
+    wf.rooms.filter(r=>!r.ceil && !r.stair).forEach(r=>{ s+=`<text x="${r.x+r.w/2}" y="${r.y+r.h-10}" font-size="10.5" fill="rgba(232,241,248,.6)" text-anchor="middle">原天花保留</text>`; });
+    S.lightsReq.forEach(p=>{ const [x,y]=p.split(',').map(Number); s+=`<circle cx="${x}" cy="${y}" r="8" fill="#174a73" stroke="${N}" stroke-width="2"/><path d="M${x-5.6} ${y-5.6}L${x+5.6} ${y+5.6}M${x+5.6} ${y-5.6}L${x-5.6} ${y+5.6}" stroke="${N}" stroke-width="1.6"/>`; });
+    notes.push(`⊗ 崁燈 Ø12cm 共 <b>${S.lightsReq.length} 盞</b>，位置對齊 1m 格線中心`, flat?'居室：<b>暗架平頂</b>，9mm 石膏板':'居室：<b>明架 60×60</b>','浴室／廁所：明架，<b>防潮矽酸鈣板</b>');
+  }
+  if(tab==='E01'){
+    s+=partitionLines(W,3,true);
+    const plug=(x,y)=>`<circle cx="${x}" cy="${y}" r="7" fill="#174a73" stroke="${N}" stroke-width="2"/><path d="M${x-7} ${y}H${x+7}M${x} ${y-7}V${y+7}" stroke="${N}" stroke-width="1.5"/>`;
+    s+=axes(Y,b);
+    S.plugs.forEach(([x,y])=>{ s+=plug(x,y); });
+    const g=GR(), px=g.x+g.w-16, py=g.y+g.h-16;
+    s+=`<rect x="${px-12}" y="${py-9}" width="24" height="18" fill="${N}"/><text x="${px}" y="${py-14}" font-size="10" fill="${N}" text-anchor="middle">配電箱</text>`;
+    S.newRooms.forEach(r=>{ const cx=(r.x0+r.x1)/2, cy=(r.y0+r.y1)/2; s+=`<path d="M${px} ${py} V${cy} H${cx}" fill="none" stroke="${N}" stroke-width="1.6" stroke-dasharray="6 4"/>`; });
+    wf.rooms.filter(r=>r.wet||r.tile).forEach(r=>{ s+=`<path d="M${r.x+10} ${r.y+r.h-10} H${r.x+r.w/2} V${r.y+r.h/2}" fill="none" stroke="#8fd0ff" stroke-width="1.6" stroke-dasharray="6 4"/>`; });
+    notes.push(`⊕ ${roomNames()}插座 ×${S.plugs.length}（裝在牆面 1m 格線中點），<b>專用迴路 20A</b>`,'所有管線於<b>封板前</b>完成，拍照存證','給排水：廚房、浴室依原位更新');
+  }
+  if(tab==='A03'){
+    wf.rooms.filter(r=>r.floor).forEach(r=>{ s+=`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="url(#bph)"/><text x="${r.x+r.w/2}" y="${r.y+r.h-10}" font-size="10.5" fill="${Y}" text-anchor="middle">SPC 5mm</text>`; });
+    s+=partitionLines(W,3,true);
+    wf.rooms.filter(r=>r.tile).forEach(r=>{ s+=`<text x="${r.x+r.w/2}" y="${r.y+r.h-10}" font-size="10.5" fill="rgba(232,241,248,.6)" text-anchor="middle">原磁磚保留</text>`; });
+    notes.push('▨ SPC 石塑地板 5mm 卡扣式（全棟居室）', lv.needLevel?'原地坪高低差大，<b>鋪設前須先整平</b>':'地坪平整，<b>可直接鋪設</b>','踢腳板：同色系 PVC 8cm');
+  }
+  wf.rooms.forEach(r=>{ s+=`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="none" stroke="${W}" stroke-width="2"/>`;
+    const [lx,ly]=roomLabelPos(r); s+=`<text x="${lx}" y="${ly}" font-size="13" fill="${W}" opacity=".9" text-anchor="middle" font-weight="700" paint-order="stroke" stroke="#174a73" stroke-width="4">${r.n}</text>`; });
+  s+=`<rect x="15" y="15" width="${b.x1-10}" height="${b.y1-10}" fill="none" stroke="${W}" stroke-width="5"/>`;
+  const tbx=b.x1+50-280, nw=tbx-(-40)-10;
+  s+=notes.map((n,i)=>`<foreignObject x="-40" y="${b.y1+18+i*24}" width="${nw}" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="color:#e8f1f8;font-size:12px;font-family:'Noto Sans TC',sans-serif">${n.replace(/<b>/g,'<b style="color:#ffd56b">')}</div></foreignObject>`).join('');
+  const ty=b.y1+18;
+  s+=`<g stroke="${W}" fill="none" stroke-width="1.2"><rect x="${tbx}" y="${ty}" width="270" height="78"/><path d="M${tbx} ${ty+26}H${tbx+270}M${tbx} ${ty+52}H${tbx+270}M${tbx+70} ${ty}V${ty+78}M${tbx+190} ${ty+52}V${ty+78}"/></g>
+  <g font-size="11" fill="${W}"><text x="${tbx+8}" y="${ty+18}" opacity=".7">案名</text><text x="${tbx+78}" y="${ty+18}" font-weight="700">${lv.client}・${lv.name}</text>
+  <text x="${tbx+8}" y="${ty+44}" opacity=".7">圖名</text><text x="${tbx+78}" y="${ty+44}" font-weight="700">${wf.name} ${info.name}</text>
+  <text x="${tbx+8}" y="${ty+70}" opacity=".7">圖號</text><text x="${tbx+78}" y="${ty+70}" font-weight="700">${info.no}${tab==='A01'&&S.flags.rev1?' <tspan fill="#ff9b8a">Rev.1</tspan>':''}${tab==='G00'&&S.flags.redrawn?' <tspan fill="#ff9b8a">Rev.1</tspan>':''}</text><text x="${tbx+198}" y="${ty+70}">單位 mm</text></g>`;
+  return s+'</svg>';
+}
+function dwgNotes(){
+  const lv=L();
+  return `<div class="notes-sheet"><h3>G-00 施工說明（${LY().name}・施工樓層 ${WF().name}）</h3><ol>
+    <li>進場前須完成<b>公共走道、電梯保護</b>（管委會規定，違者罰款）</li>
+    <li>輕隔間 C-75 型鋼<b>頂天至樓板</b>，內填 60K 隔音棉，雙面封板</li>
+    <li>水電管線須於<b>封板前</b>完成並拍照存證</li>
+    <li>天花板：居室<b>${lv.ceilReq==='flat'?'暗架平頂':'明架 60×60'}</b>；浴室／廁所<b>明架＋防潮矽酸鈣板</b></li>
+    <li>牆面油漆：業主指定 <b>${S.paintReq}色</b>，兩底一面${S.flags.redrawn?' <span class="rev">（Rev.1 已更新）</span>':''}</li>
+    <li>${lv.needLevel?'SPC 地板鋪設前，原地坪須<b>整平</b>':'地坪平整，SPC 地板<b>可直接鋪設</b>'}</li>
+    <li>崁燈位置依 A-02 天花板配置圖；插座位置依 E-01 水電配置圖</li>
+    <li>拆除範圍依 D-01 拆除平面圖，<b>標示保留的設備不可拆</b></li>
+    <li>門：新作房間一律<b>隔音門</b>（實心門片＋止風條）</li>
+    <li>家具軟裝：業主喜歡 <b>${lv.style}風</b></li>
+    ${lv.extra.includes('W')?'<li>浴室：重做<b>防水層＋磁磚</b>（在水電之後、天花板封板之前）</li>':''}
+    ${lv.extra.includes('AC')?'<li>冷氣：冷媒管、排水管<b>封板前預埋</b></li>':''}
+    ${lv.extra.includes('O')?'<li>木作：客廳<b>窗簾盒</b>，與天花板骨架一起收邊</li>':''}
+    ${lv.extra.includes('S')?'<li>系統櫃：臥室衣櫃、書櫃，<b>油漆、地板完成後</b>進場</li>':''}
+    <li>工期：<b>${lv.deadline} 日曆天</b></li></ol>
+    <p class="disc" style="color:#bcd6ea">※ ${DISCLAIMER}</p></div>`;
+}
+function openDrawings(tab, cb){
+  if(tab) dwgTab=tab; dwgCb=cb||null;
+  Music.sfx('paper');
+  const root=document.getElementById('dwgRoot');
+  const body = dwgTab==='G00' ? dwgNotes() : drawingSVG(dwgTab);
+  root.innerHTML=`<div class="dwg-dim"><div class="dwg">
+    <div class="dwg-head"><b>📜 施工圖・${L().client}・${L().name}（${WF().name}）</b><button class="btn sec" id="dwgClose">收起圖面 ✕</button></div>
+    <div class="dwg-tabs">${DWG_TABS.map(t=>`<button class="dwg-tab ${t.id===dwgTab?'on':''}" data-d="${t.id}"><small>${t.no}</small>${t.name}</button>`).join('')}</div>
+    <div class="dwg-body">${body}</div></div></div>`;
+  root.querySelectorAll('.dwg-tab').forEach(b=>b.onclick=()=>{ dwgTab=b.dataset.d; openDrawings(null, dwgCb); });
+  root.querySelector('#dwgClose').onclick=()=>{ root.innerHTML=''; const c=dwgCb; dwgCb=null; if(c) c(); else tryAfter(); };
+  root.querySelector('.dwg-dim').onclick=e=>{ if(e.target.classList.contains('dwg-dim')) root.querySelector('#dwgClose').click(); };
+}
+
+/* =========================================================
+   2D 平面圖
+   ========================================================= */
+function edgeEl(k){ const [x1,y1,x2,y2]=edgeXY(k), on=S.walls.has(k);
+  return `<line class="edge" data-k="${k}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="transparent" stroke-width="18" style="cursor:pointer"/>
+  <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${on?'#ff7a1a':'#a49a86'}" stroke-width="${on?8:1.4}" stroke-linecap="round" pointer-events="none"/>`; }
+function lightSpots(){ const out=[]; WF().rooms.filter(r=>r.ceil).forEach(r=>{ cellsOf(r.x,r.y,r.w,r.h).forEach(c=>out.push(c.join(','))); }); return out; }
+function workers2d(id){
+  const [x,y]=taskPos(id);
+  const w=(dx,cls,hat)=>`<g class="bob ${cls}"><ellipse cx="${x+dx}" cy="${y+14}" rx="9" ry="3" fill="rgba(0,0,0,.25)"/><circle cx="${x+dx}" cy="${y}" r="8" fill="#e2b48c" stroke="#1f2a2e" stroke-width="1.5"/><path d="M${x+dx-9} ${y-1} Q${x+dx} ${y-15} ${x+dx+9} ${y-1}Z" fill="${hat}" stroke="#1f2a2e" stroke-width="1.5"/></g>`;
+  return `<g pointer-events="none"><circle class="dust" cx="${x}" cy="${y+6}" r="22" fill="#c8bfae"/>${w(-14,'','#ffc94a')}${w(14,'b2','#ff7a1a')}</g>`;
+}
+function fixture2d(r, f){
+  const rc=fxRect(r); if(!rc) return '';
+  if(f===L().work.floor && fxGone(r)) return '';
+  const [x,y,w,h]=rc;
+  if(r.fx==='counter') return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#9b8b78" stroke="#6b5c4b"/>`;
+  if(r.fx==='tub') return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="#fff" stroke="#9aa"/>`;
+  if(r.fx==='toilet') return `<ellipse cx="${x+w/2}" cy="${y+h/2}" rx="${w/2}" ry="${h/2}" fill="#fff" stroke="#9aa"/>`;
+  if(r.fx==='altar') return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#a33a2a" stroke="#6b1f14"/>`;
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#8a6d4b" stroke="#5e4a33"/><path d="M${x} ${y}L${x+w} ${y+h}M${x+w} ${y}L${x} ${y+h}" stroke="#5e4a33" stroke-width="1.5"/>`;
+}
+/* ---------- 家具軟裝 ---------- */
+function freeRectOfGrid(){
+  const g=GR(); let best=null;
+  const ov=(a,r)=>a[0]<r.x1&&a[0]+a[2]>r.x0&&a[1]<r.y1&&a[1]+a[3]>r.y0;
+  const cands=[];
+  S.newRooms.forEach(r=>{ cands.push([g.x,g.y,g.w,r.y0-g.y],[g.x,r.y1,g.w,g.y+g.h-r.y1],[g.x,g.y,r.x0-g.x,g.h],[r.x1,g.y,g.x+g.w-r.x1,g.h]); });
+  cands.filter(c=>c[2]>=80&&c[3]>=80&&!S.newRooms.some(r=>ov(c,r))).forEach(c=>{ if(!best||c[2]*c[3]>best[2]*best[3]) best=c; });
+  return best||[g.x,g.y,g.w,g.h];
+}
+function roomKind(n){
+  if(/客廳|起居|夾層/.test(n)) return 'living'; if(/臥|客房|小孩房/.test(n)) return 'bed'; if(/書房|主管室/.test(n)) return 'study';
+  if(/會議室/.test(n)) return 'meeting'; if(/和室/.test(n)) return 'tatami'; if(/辦公區/.test(n)) return 'office'; if(/店面/.test(n)) return 'shop';
+  if(/倉庫/.test(n)) return 'store'; if(/視聽/.test(n)) return 'av'; if(/廚房/.test(n)) return 'dining'; if(/神明/.test(n)) return 'altarroom'; return null;
+}
+function furnish(kind,x,y,w,h,st,f,out){
+  const B=(bx,by,bw,bh,ht,col,z=0)=>out.push({f,x:bx,y:by,w:bw,h:bh,z,ht,col}); const cx=x+w/2, cy=y+h/2;
+  const P=(px,py)=>out.push({f,x:px,y:py,plant:true});
+  switch(kind){
+    case 'living': B(cx-56,cy-30,112,74,.02,st.rug); B(cx-48,y+h-44,96,32,.8,st.fabric); B(cx-48,y+h-44,96,8,.95,st.fabric); B(cx-24,cy-6,48,24,.4,st.wood); B(cx-40,y+10,80,16,.5,st.wood); B(cx-24,y+8,48,4,.7,'#1b1f22',.5); P(x+w-22,y+h-20); break;
+    case 'bed': B(cx-44,cy-26,88,70,.02,st.rug); B(cx-30,cy-40,60,80,.5,st.fabric); B(cx-30,cy-44,60,6,1.0,st.wood); B(cx-26,cy-36,52,12,.62,'#ffffff'); B(cx+34,cy-42,16,16,.5,st.wood); P(x+16,y+h-16); break;
+    case 'study': B(x+12,y+12,58,28,.75,st.wood); B(x+30,y+44,20,20,.45,st.accent); B(x+w-24,y+12,14,Math.min(h-24,70),1.9,st.wood); B(cx-28,cy+4,56,36,.02,st.rug); P(x+w-20,y+h-18); break;
+    case 'meeting': B(cx-50,cy-18,100,36,.75,st.wood); for(let i=0;i<3;i++){ B(cx-42+i*32,cy-36,16,14,.45,st.accent); B(cx-42+i*32,cy+22,16,14,.45,st.accent); } B(cx-34,y+4,68,4,1.0,'#15191c',.9); P(x+14,y+h-16); break;
+    case 'tatami': B(x+8,y+8,w-16,h-16,.4,'#cfc58a'); B(cx-22,cy-14,44,28,.3,st.wood,.4); B(cx-8,cy-6,16,12,.05,'#7a8a5a',.7); break;
+    case 'office': for(let r=0;r<2;r++) for(let c=0;c<3;c++){ const dx=x+20+c*Math.min(70,(w-40)/3), dy=y+20+r*Math.min(70,(h-40)/2); B(dx,dy,48,26,.75,st.wood); B(dx+14,dy+30,18,16,.45,st.accent); } P(x+w-18,y+16); break;
+    case 'shop': B(x+w-120,y+18,96,24,1.0,st.wood); for(let i=0;i<3;i++) B(x+w-110+i*30,y+48,14,14,.65,st.accent); B(x+14,y+14,14,Math.min(h-28,120),1.8,st.wood); B(cx-30,cy,60,30,.8,st.wood); P(x+w-22,y+h-20); break;
+    case 'store': B(x+8,y+8,16,h-16,2.0,'#8a8f93'); B(x+28,y+8,w-36,16,2.0,'#8a8f93'); B(cx-14,cy-10,28,28,.6,'#b48a5a'); break;
+    case 'av': B(cx-44,cy-20,88,60,.02,st.rug); B(cx-42,y+h-38,84,28,.8,st.fabric); B(cx-46,y+6,92,5,1.2,'#111418',.6); break;
+    case 'dining': if(w>=160&&h>=110){ B(cx-28,cy-6,56,34,.75,st.wood); B(cx-24,cy-20,14,12,.45,st.accent); B(cx+10,cy-20,14,12,.45,st.accent); B(cx-24,cy+32,14,12,.45,st.accent); B(cx+10,cy+32,14,12,.45,st.accent); } break;
+    case 'altarroom': B(cx-30,cy+10,18,18,.45,st.wood); B(cx+12,cy+10,18,18,.45,st.wood); break;
+  }
+}
+function furnRooms(){
+  const wf=L().work.floor, g=GR(), list=[];
+  LY().floors.forEach((fl,f)=>fl.rooms.forEach(r=>{ const k=roomKind(r.n); if(!k) return;
+    if(f===wf && r===g){ const [x,y,w,h]=freeRectOfGrid(); list.push({key:`${f}-${r.n}`,k,f,x,y,w,h}); }
+    else list.push({key:`${f}-${r.n}`,k,f,x:r.x,y:r.y,w:r.w,h:r.h}); }));
+  S.newRooms.forEach(r=>{ const k=roomKind(r.name); if(k) list.push({key:`${wf}-${r.name}`,k,f:wf,x:r.x0,y:r.y0,w:r.x1-r.x0,h:r.y1-r.y0}); });
+  return list;
+}
+let FID=0;
+function genRoom(R){ const st=STYLES[S.furniture], tmp=[]; furnish(R.k,R.x,R.y,R.w,R.h,st,R.f,tmp); const v=S.fvar[R.key]||0;
+  tmp.forEach(it=>{ if(v&1){ it.x = it.plant ? R.x+R.w-(it.x-R.x) : R.x+R.w-(it.x-R.x)-it.w; } if(v&2){ it.y = it.plant ? R.y+R.h-(it.y-R.y) : R.y+R.h-(it.y-R.y)-it.h; } it.key=R.key; it.id='f'+(FID++); });
+  return tmp; }
+function genFurn(){ return furnRooms().flatMap(genRoom); }
+function furnitureItems(){
+  const out=[];
+  if(S.done && S.done.S){ furnRooms().filter(R=>R.k==='bed'||R.k==='study').forEach(R=>out.push({f:R.f, x:R.x+10, y:R.y+6, w:Math.min(84,R.w-20), h:14, z:0, ht:2.2, col:'#efe9df', fixed:true})); }
+  if(S.furn) out.push(...S.furn);
+  return out;
+}
+const plugsShown = () => S.lv>=3 ? [...S.plugSel].map(edgeMid) : S.plugs;
+function planSVG(f){
+  const D=S.done, lv=L(), rooms=LY().floors[f].rooms, isW=f===lv.work.floor, b=floorBounds(f);
+  let s=`<svg viewBox="-24 -24 ${b.x1+48} ${b.y1+48}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="工地平面圖" ${S.mode?'style="touch-action:none"':''}><defs>
+  <pattern id="wood" width="48" height="14" patternUnits="userSpaceOnUse"><rect width="48" height="14" fill="#cfae84"/><path d="M0 13.5H48" stroke="#a9875e"/><path d="M30 0V14" stroke="#a9875e" stroke-width=".8"/></pattern>
+  <pattern id="concrete" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="14" height="14" fill="#d1ccc1"/><circle cx="3" cy="4" r=".9" fill="#b1aa9c"/><circle cx="10" cy="10" r=".7" fill="#bcb5a8"/></pattern>
+  <pattern id="tile" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="#e9eeec"/><path d="M0 0H20M0 0V20" stroke="#bfc6c3"/></pattern>
+  <pattern id="tile2" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#d6e6ee"/><path d="M0 0H16M0 0V16" stroke="#9fb8c6"/></pattern>
+  <pattern id="stairp" width="40" height="12" patternUnits="userSpaceOnUse"><rect width="40" height="12" fill="#b9b2a6"/><path d="M0 11.5H40" stroke="#8a8378" stroke-width="1.5"/></pattern>
+  <pattern id="hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V9" stroke="#7a5d3e" stroke-width="2.4" opacity=".4"/></pattern>
+  <pattern id="mj" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="#fbfaf7"/><path d="M0 0H24M0 0V24" stroke="#8f989c" stroke-width="1.4"/></pattern>
+  <pattern id="frame" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M0 0H24M0 0V24" stroke="#5d6e75" stroke-width="1.3" stroke-dasharray="3 2"/></pattern>
+  <radialGradient id="glow"><stop offset="0" stop-color="#ffd76a" stop-opacity=".95"/><stop offset="1" stop-color="#ffd76a" stop-opacity="0"/></radialGradient>
+  </defs><rect x="-24" y="-24" width="${b.x1+48}" height="${b.y1+48}" fill="#3a3530"/>`;
+  rooms.forEach(r=>{ const fl=r.stair?'url(#stairp)':(r.wet&&D.W)?'url(#tile2)':r.tile?'url(#tile)':(D.I&&r.floor?'url(#wood)':'url(#concrete)'); s+=`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${fl}"/>`+fixture2d(r,f); });
+  if(D.H) rooms.filter(r=>!r.stair).forEach(r=>{ s+=`<rect x="${r.x+5}" y="${r.y+5}" width="${r.w-10}" height="${r.h-10}" fill="none" stroke="${S.paint}" stroke-width="7"/>`; });
+  if(S.showCeil || S.mode==='demo') rooms.filter(r=>r.ceil && (!D.B || (isW && !D.F && S.missedCeil.includes(r.n)))).forEach(r=>{ s+=`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="url(#hatch)"/>`; });
+  if(D.C && isW){ const op=(D.G&&S.showCeil)?.18:1, g=GR(), px=g.x+g.w-16, py=g.y+g.h-16;
+    s+=`<g opacity="${op}" fill="none" stroke-width="3" stroke-linecap="round">`;
+    S.newRooms.forEach(r=>{ s+=`<path d="M${px} ${py} V${(r.y0+r.y1)/2} H${(r.x0+r.x1)/2}" stroke="#e8590c" stroke-dasharray="7 4"/>`; });
+    rooms.filter(r=>r.wet||r.tile).forEach(r=>{ s+=`<path d="M${r.x+10} ${r.y+r.h-10} H${r.x+r.w/2} V${r.y+r.h/2}" stroke="#2b7bb9" stroke-dasharray="7 4"/>`; });
+    s+=`<circle cx="${px}" cy="${py}" r="6" fill="#e8590c" stroke="none"/></g>`; }
+  if((S.showCeil||S.mode==='lights') && D.F){
+    rooms.filter(r=>r.ceil).forEach(r=>{ const fill=!D.G?'url(#frame)':(r.wet||S.ceil==='grid')?'url(#mj)':'#fbfaf7';
+      s+=`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${fill}" opacity="${D.G?.62:1}"/>`; }); }
+  if(D.J && S.showCeil && isW) [...S.lights].map(p=>p.split(',').map(Number)).forEach(([x,y])=>{
+    s+=`<circle cx="${x}" cy="${y}" r="24" fill="url(#glow)"/><circle cx="${x}" cy="${y}" r="4.5" fill="#fff6d6" stroke="#c9a33a"/>`; });
+  if(S.phase==='end' && isW){ const w=rooms.find(r=>r.wet);
+    if(w && S.flags.mold) s+=`<g fill="#5f7d3a" opacity=".65"><circle cx="${w.x+30}" cy="${w.y+30}" r="9"/><circle cx="${w.x+45}" cy="${w.y+38}" r="5"/></g>`;
+    if(w && S.flags.leak) s+=`<ellipse cx="${w.x+w.w/2}" cy="${w.y+w.h/2}" rx="26" ry="16" fill="#6b8fa8" opacity=".4"/>`; }
+  rooms.forEach(r=>{ s+=`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="none" stroke="#2b3438" stroke-width="4"/>`; });
+  s+=`<rect x="15" y="15" width="${b.x1-10}" height="${b.y1-10}" fill="none" stroke="#141b1f" stroke-width="10"/>`;
+  if(S.mode==='wall' && isW){
+    const g=gridIdx();
+    s+=axes('#ffc94a', b);
+    if(has('laser')){ const k=S.target[0], [x1,y1,x2,y2]=edgeXY(k), gr=GR();
+      s+= y1===y2 ? `<line x1="${gr.x}" y1="${y1}" x2="${gr.x+gr.w}" y2="${y1}" stroke="#ff2a2a" stroke-width="1.5" opacity=".8" stroke-dasharray="2 3"/>` : `<line x1="${x1}" y1="${gr.y}" x2="${x1}" y2="${gr.y+gr.h}" stroke="#ff2a2a" stroke-width="1.5" opacity=".8" stroke-dasharray="2 3"/>`; }
+    for(let j=g.j0+1;j<g.j1;j++) for(let i=g.i0;i<g.i1;i++) s+=edgeEl(`h${i}_${j}`);
+    for(let i=g.i0+1;i<g.i1;i++) for(let j=g.j0;j<g.j1;j++) s+=edgeEl(`v${i}_${j}`);
+    for(let i=g.i0;i<=g.i1;i++) for(let j=g.j0;j<=g.j1;j++) s+=`<circle cx="${20+40*i}" cy="${20+40*j}" r="2" fill="#7d7464" pointer-events="none"/>`;
+  } else if(D.D && isW){
+    const st=D.E?'stroke="#2b3438" stroke-width="8"':'stroke="#6f7f86" stroke-width="6" stroke-dasharray="6 3"';
+    S.walls.forEach(k=>{ const [x1,y1,x2,y2]=edgeXY(k); s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${st} stroke-linecap="square"/>`; });
+  }
+  s+='<g pointer-events="none">';
+  if(isW && D.C && S.mode!=='wiring') plugsShown().forEach(([x,y])=>{ s+=`<circle cx="${x}" cy="${y}" r="5" fill="#fff" stroke="#e8590c" stroke-width="2"/><path d="M${x-3} ${y}H${x+3}M${x} ${y-3}V${y+3}" stroke="#e8590c" stroke-width="1.4"/>`; });
+  if(isW && D.M) S.doors.forEach(d=>{ s+=doorSVG(d.k,d.swing,'#8a6247').replace('stroke-width="2"','stroke-width="5"'); });
+  furnitureItems().filter(it=>it.f===f).forEach(it=>{ if(it.plant) s+=`<text x="${it.x}" y="${it.y+6}" font-size="16" text-anchor="middle">${it.ch||'🪴'}</text>`;
+    else s+=`<rect x="${it.x}" y="${it.y}" width="${it.w}" height="${it.h}" rx="3" fill="${it.col}" stroke="rgba(0,0,0,.28)" opacity="${it.ht<.05?.75:1}"/>`; });
+  s+='</g>';
+  if(S.mode==='demo' && isW) S.demoItems.forEach(d=>{ const [x,y,w,h]=d.rect, on=S.demoSel.has(d.id);
+    s+=`<g data-demo="${d.id}" style="cursor:pointer"><rect x="${x-3}" y="${y-3}" width="${w+6}" height="${h+6}" rx="5" fill="${on?'rgba(255,60,50,.6)':'rgba(255,255,255,.7)'}" stroke="${on?'#ff2a2a':'#5e4a33'}" stroke-width="2" ${on?'':'stroke-dasharray="4 3"'}/>${on?`<path d="M${x} ${y}L${x+w} ${y+h}M${x+w} ${y}L${x} ${y+h}" stroke="#fff" stroke-width="2"/>`:''}<text x="${x+w/2}" y="${y+h/2+4}" font-size="10.5" text-anchor="middle" fill="${on?'#fff':'#1f2a2e'}" font-weight="900">${on?'拆・':''}${d.label}</text></g>`; });
+  if(S.mode==='wiring' && isW){ s+=axes('#ffc94a', b);
+    edgeSpots().forEach(k=>{ const [x,y]=edgeMid(k), on=S.plugSel.has(k);
+      s+= on ? `<circle cx="${x}" cy="${y}" r="7" fill="#fff" stroke="#e8590c" stroke-width="2.5" pointer-events="none"/><path d="M${x-4} ${y}H${x+4}M${x} ${y-4}V${y+4}" stroke="#e8590c" stroke-width="1.6" pointer-events="none"/>` : `<circle cx="${x}" cy="${y}" r="2.5" fill="#8a8170" pointer-events="none"/>`;
+      s+=`<circle data-p="${k}" cx="${x}" cy="${y}" r="13" fill="transparent" style="cursor:pointer"/>`; }); }
+  const g=GR();
+  rooms.forEach(r=>{ const [lx,ly]= (isW && r===g) ? lv.mainLabel : [r.x+r.w/2, r.y+17];
+    s+=`<text x="${lx}" y="${ly}" font-size="13" font-weight="900" text-anchor="middle" fill="#1f2a2e" opacity=".75" pointer-events="none" paint-order="stroke" stroke="rgba(255,255,255,.55)" stroke-width="3">${r.n}</text>`; });
+  if(D.D && isW && S.mode!=='wall') S.newRooms.forEach(r=>{ s+=`<text x="${(r.x0+r.x1)/2}" y="${r.y0+17}" font-size="13" font-weight="900" text-anchor="middle" fill="#1f2a2e" opacity=".75" pointer-events="none" paint-order="stroke" stroke="rgba(255,255,255,.55)" stroke-width="3">${r.name}</text>`; });
+  if(isW) S.debris.forEach(d=>{ s+=`<text x="${d.p[0]}" y="${d.p[1]}" font-size="16" text-anchor="middle" pointer-events="none">${d.ch}</text>`; });
+  if(S.mode==='lights' && isW){
+    s+=axes('#ffc94a', b);
+    lightSpots().forEach(k=>{ const [x,y]=k.split(',').map(Number), on=S.lights.has(k);
+      s+= on ? `<circle cx="${x}" cy="${y}" r="20" fill="url(#glow)" pointer-events="none"/><circle cx="${x}" cy="${y}" r="7" fill="#fff6d6" stroke="#c97a00" stroke-width="2" pointer-events="none"/>`
+             : `<circle cx="${x}" cy="${y}" r="3" fill="#8a8170" pointer-events="none"/>`;
+      s+=`<circle data-l="${k}" cx="${x}" cy="${y}" r="16" fill="transparent" style="cursor:pointer"/>`; });
+  }
+  if(S.mode==='inspect' && isW && S.defects) S.defects.forEach(d=>{
+    if(d.found) s+=`<g pointer-events="none"><circle cx="${d.x}" cy="${d.y}" r="14" fill="rgba(76,195,138,.25)" stroke="#2f7d4f" stroke-width="2.5"/><text x="${d.x}" y="${d.y+5}" font-size="14" text-anchor="middle" fill="#2f7d4f" font-weight="900">✔</text><text x="${d.x}" y="${d.y-18}" font-size="10.5" text-anchor="middle" fill="#1f2a2e" font-weight="900" paint-order="stroke" stroke="#fff" stroke-width="3">${d.label}</text></g>`;
+    else if(d.k==='crack') s+=`<path d="M${d.x-9} ${d.y-6} l4 4 l-3 3 l5 3 l-2 4 l4 2" fill="none" stroke="#5a544a" stroke-width="1.6" opacity=".7" pointer-events="none"/>`;
+    else if(d.k==='stain') s+=`<ellipse cx="${d.x}" cy="${d.y}" rx="10" ry="7" fill="#8a6d4b" opacity=".28" pointer-events="none"/>`;
+    else s+=`<circle cx="${d.x}" cy="${d.y}" r="8" fill="none" stroke="#6b6458" stroke-width="1.5" stroke-dasharray="2 2" opacity=".7" pointer-events="none"/>`; });
+  if(S.active && isW) s+=workers2d(S.active);
+  if(isW && S.mode) s+=`<g id="ghost" pointer-events="none"></g><rect id="hitpad" x="-24" y="-24" width="${b.x1+48}" height="${b.y1+48}" fill="transparent" style="cursor:crosshair"/>`;
+  return s+'</svg>';
+}
+
+/* =========================================================
+   3D 視圖（自製正交投影＋畫家演算法，X／Y／Z 軸）
+   ========================================================= */
+const V3 = {
+  yaw:-0.6, pitch:0.82, zoom:1, cut:true, floorSel:null, raf:null, t:0,
+  reset(){ this.yaw=-0.6; this.pitch=0.82; this.zoom=1; this.floorSel=null; },
+  animate(){ if(this.raf) return; const loop=(ts)=>{ this.t=ts/1000; draw3D(); if(S.busy && S.view==='3d') this.raf=requestAnimationFrame(loop); else { this.raf=null; draw3D(); } }; this.raf=requestAnimationFrame(loop); },
+};
+const FH=3.0;
+const m = v => (v-20)/40;
+function hexRGB(h){ const n=parseInt(h.slice(1),16); return [n>>16, n>>8&255, n&255]; }
+function shadeCol(hex, f, a=1){ const [r,g,b]=hexRGB(hex); return `rgba(${Math.min(255,r*f)|0},${Math.min(255,g*f)|0},${Math.min(255,b*f)|0},${a})`; }
+const LIGHT_DIR=(()=>{ const v=[-0.45,-0.6,0.66]; const l=Math.hypot(...v); return v.map(x=>x/l); })();
+
+function scene3D(){
+  const lv=L(), Ly=LY(), D=S.done, wf=lv.work.floor, sel=V3.floorSel??S.floorView??wf;
+  const layers=[];
+  for(let f=0; f<=Math.min(sel, Ly.floors.length-1); f++){
+    const base=[], items=[], top=[];
+    const fl=Ly.floors[f], z0=f*FH, isSel=f===sel, isW=f===wf, b=floorBounds(f);
+    const wallH = isSel ? (V3.cut?1.35:2.8) : 2.8;
+    const quad=(arr,pts,col,n,alpha=1,stroke=true)=>arr.push({k:'poly',pts,col,n,alpha,stroke});
+    const box=(arr,x0,y0,z0_,x1,y1,z1,col,opt={})=>{ const a=opt.alpha??1, tc=opt.top||col;
+      quad(arr,[[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]],tc,[0,0,1],a);
+      quad(arr,[[x0,y0,z0_],[x1,y0,z0_],[x1,y0,z1],[x0,y0,z1]],col,[0,-1,0],a);
+      quad(arr,[[x1,y1,z0_],[x0,y1,z0_],[x0,y1,z1],[x1,y1,z1]],col,[0,1,0],a);
+      quad(arr,[[x0,y1,z0_],[x0,y0,z0_],[x0,y0,z1],[x0,y1,z1]],col,[-1,0,0],a);
+      quad(arr,[[x1,y0,z0_],[x1,y1,z0_],[x1,y1,z1],[x1,y0,z1]],col,[1,0,0],a); };
+    // 樓板
+    box(base,0,0,z0-0.18,m(b.x1),m(b.y1),z0,'#8d877c',{top:'#8d877c'});
+    fl.rooms.forEach(r=>{
+      const col = r.stair?'#b7b0a3' : (r.wet&&D.W)?'#cfe0e9' : r.tile?'#e4e9e7' : (D.I&&r.floor?'#c9a274':'#cfc9bd');
+      quad(base,[[m(r.x),m(r.y),z0+.01],[m(r.x+r.w),m(r.y),z0+.01],[m(r.x+r.w),m(r.y+r.h),z0+.01],[m(r.x),m(r.y+r.h),z0+.01]],col,[0,0,1],1,true);
+      if(r.floor && D.I){ for(let yy=r.y+14; yy<r.y+r.h; yy+=14) base.push({k:'line', pts:[[m(r.x),m(yy),z0+.02],[m(r.x+r.w),m(yy),z0+.02]], col:'rgba(140,105,65,.35)', w:1}); }
+      if(r.tile){ for(let xx=r.x+20; xx<r.x+r.w; xx+=20) base.push({k:'line', pts:[[m(xx),m(r.y),z0+.02],[m(xx),m(r.y+r.h),z0+.02]], col:'rgba(150,160,158,.5)', w:1});
+                  for(let yy=r.y+20; yy<r.y+r.h; yy+=20) base.push({k:'line', pts:[[m(r.x),m(yy),z0+.02],[m(r.x+r.w),m(yy),z0+.02]], col:'rgba(150,160,158,.5)', w:1}); }
+      // 家具／設備
+      const X0=m(r.x), Y0=m(r.y), X1=m(r.x+r.w), Y1=m(r.y+r.h);
+      if(isSel || !isSel){
+        const rc=fxRect(r);
+        if(rc && !(isW && fxGone(r))){ const [fx,fy,fw,fh]=rc, a0=m(fx), b0=m(fy), a1=m(fx+fw), b1=m(fy+fh);
+          const spec={counter:[.9,'#9b8b78','#d9d2c6'], tub:[.55,'#f4f6f6','#ffffff'], toilet:[.45,'#f4f6f6','#ffffff'], altar:[1.1,'#a33a2a','#c9a33a'], cabinet:[2.0,'#8a6d4b','#7a5d3e'], wardrobe:[2.1,'#8a6d4b','#7a5d3e'], oldcounter:[1.0,'#7a5d3e','#6b5040']}[r.fx];
+          box(items,a0,b0,z0,a1,b1,z0+spec[0],spec[1],{top:spec[2]}); }
+        if(r.stair){ const n=10, along = r.h>=r.w; for(let k=0;k<n;k++){ const t0=k/n, t1=(k+1)/n;
+          if(along) box(items,X0+.15,Y1-(Y1-Y0)*t1,z0,X1-.15,Y1-(Y1-Y0)*t0,z0+FH*t1*0.95,'#a69f93',{top:'#c8c1b4'});
+          else box(items,X0+(X1-X0)*t0,Y0+.15,z0,X0+(X1-X0)*t1,Y1-.15,z0+FH*t1*0.95,'#a69f93',{top:'#c8c1b4'}); } }
+      }
+    });
+    // 牆
+    const segs=new Map();
+    fl.rooms.forEach(r=>{ [[r.x,r.y,r.x+r.w,r.y],[r.x,r.y+r.h,r.x+r.w,r.y+r.h],[r.x,r.y,r.x,r.y+r.h],[r.x+r.w,r.y,r.x+r.w,r.y+r.h]].forEach(s=>segs.set(s.join(','),s)); });
+    const wallCol = D.H ? (S.paint||'#efece6') : '#e9e5dc';
+    const topCol = isSel && V3.cut ? '#2b3438' : '#d8d3c8';
+    const ext=(x,y)=>x===20||y===20||x===b.x1||y===b.y1;
+    segs.forEach(([x1,y1,x2,y2])=>{ const t=(ext(x1,y1)&&ext(x2,y2)&&(x1===x2?(x1===20||x1===b.x1):(y1===20||y1===b.y1)))?.1:.06;
+      const X1=m(x1),Y1=m(y1),X2=m(x2),Y2=m(y2);
+      if(x1===x2) box(items,X1-t,Y1,z0,X1+t,Y2,z0+wallH,wallCol,{top:topCol}); else box(items,X1,Y1-t,z0,X2,Y1+t,z0+wallH,wallCol,{top:topCol}); });
+    if(isW && isSel){
+      // 新隔間（合併成長段）
+      if(D.D && S.mode!=='wall'){
+        const hs={}, vs={};
+        S.walls.forEach(k=>{ const [x1,y1,x2,y2]=edgeXY(k); if(y1===y2) (hs[y1]=hs[y1]||[]).push(x1); else (vs[x1]=vs[x1]||[]).push(y1); });
+        const runs=(arr)=>{ arr.sort((a,b)=>a-b); const out=[]; let s0=arr[0], p=arr[0]; for(let i=1;i<=arr.length;i++){ if(arr[i]===p+40){p=arr[i];continue;} out.push([s0,p+40]); s0=arr[i]; p=arr[i]; } return out; };
+        const pc = D.E ? wallCol : '#9aa6ab', pa = D.E ? 1 : .75, ptop = D.E ? topCol : '#6f7f86';
+        Object.entries(hs).forEach(([y,xs])=>runs(xs).forEach(([a,c])=>box(items,m(a),m(+y)-.05,z0,m(c),m(+y)+.05,z0+wallH,pc,{alpha:pa, top:ptop})));
+        Object.entries(vs).forEach(([x,ys])=>runs(ys).forEach(([a,c])=>box(items,m(+x)-.05,m(a),z0,m(+x)+.05,m(c),z0+wallH,pc,{alpha:pa, top:ptop})));
+      }
+      // 門、門楣
+      if(D.E && S.mode!=='wall') S.doors.forEach(d=>{ const [x1,y1,x2,y2]=edgeXY(d.k), horiz=y1===y2, dh=Math.min(2.1,wallH);
+        const bx=(z1,z2,col,opt)=> horiz ? box(items,m(x1),m(y1)-.05,z1,m(x2),m(y1)+.05,z2,col,opt) : box(items,m(x1)-.05,m(y1),z1,m(x1)+.05,m(y2),z2,col,opt);
+        if(wallH>2.1) bx(z0+2.1,z0+wallH,wallCol,{top:topCol});
+        if(D.M){ horiz ? box(items,m(x1)+.03,m(y1)-.025,z0,m(x2)-.03,m(y1)+.025,z0+dh,'#8a6247',{top:'#6b4a33'}) : box(items,m(x1)-.025,m(y1)+.03,z0,m(x1)+.025,m(y2)-.03,z0+dh,'#8a6247',{top:'#6b4a33'}); } });
+      // 插座
+      if(D.C) plugsShown().forEach(([x,y])=>{ box(items,m(x)-.08,m(y)-.08,z0+.28,m(x)+.08,m(y)+.08,z0+.42,'#ffffff'); });
+      // 水電
+      if(D.C){ const g=GR(), px=m(g.x+g.w-16), py=m(g.y+g.h-16), zc=z0+wallH-.05;
+        S.newRooms.forEach(r=>{ const cx=m((r.x0+r.x1)/2), cy=m((r.y0+r.y1)/2); items.push({k:'line', pts:[[px,py,zc],[px,cy,zc],[cx,cy,zc]], col:'#e8590c', w:2.5, dash:[6,4]}); });
+        fl.rooms.filter(r=>r.wet||r.tile).forEach(r=>{ items.push({k:'line', pts:[[m(r.x+10),m(r.y+r.h-10),z0+.05],[m(r.x+r.w/2),m(r.y+r.h-10),z0+.05],[m(r.x+r.w/2),m(r.y+r.h/2),z0+.05]], col:'#2b7bb9', w:2.5, dash:[6,4]}); }); }
+      S.debris.forEach(d=>items.push({k:'emoji', p:[m(d.p[0]),m(d.p[1]),z0+.05], ch:d.ch}));
+      if(S.active){ const [x,y]=taskPos(S.active); items.push({k:'worker', p:[m(x)-.35,m(y),z0], hat:'#ffc94a', ph:0}); items.push({k:'worker', p:[m(x)+.35,m(y)+.1,z0], hat:'#ff7a1a', ph:1.6}); }
+    }
+    // 家具軟裝
+    if(isSel) furnitureItems().filter(it=>it.f===f).forEach(it=>{
+      if(it.plant){ items.push({k:'emoji', p:[m(it.x),m(it.y),z0+.6], ch:it.ch||'🪴', sel:it.id&&it.id===V3.sel}); return; }
+      const a0=m(it.x), b0=m(it.y), a1=m(it.x+it.w), b1=m(it.y+it.h);
+      if(it.ht<.05) quad(base,[[a0,b0,z0+.025],[a1,b0,z0+.025],[a1,b1,z0+.025],[a0,b1,z0+.025]],it.col,[0,0,1],.85,false);
+      else box(items,a0,b0,z0+it.z,a1,b1,z0+it.z+it.ht, it.id&&it.id===V3.sel?'#ffc94a':it.col); });
+    // 天花板
+    if(isSel && S.showCeil){
+      const zc=z0+wallH+.02;
+      fl.rooms.filter(r=>r.ceil).forEach(r=>{
+        const P=[[m(r.x),m(r.y),zc],[m(r.x+r.w),m(r.y),zc],[m(r.x+r.w),m(r.y+r.h),zc],[m(r.x),m(r.y+r.h),zc]];
+        if(!D.B || (isW && !D.F && S.missedCeil.includes(r.n))) quad(top,P,'#a58a66',[0,0,1],.45);
+        else if(D.F){
+          if(D.G) quad(top,P,'#fbfaf7',[0,0,1],.5);
+          if(!D.G || r.wet || S.ceil==='grid'){ const st=.6;
+            for(let xx=m(r.x)+st; xx<m(r.x+r.w); xx+=st) top.push({k:'line', pts:[[xx,m(r.y),zc],[xx,m(r.y+r.h),zc]], col:D.G?'rgba(120,130,135,.6)':'rgba(80,95,102,.75)', w:1});
+            for(let yy=m(r.y)+st; yy<m(r.y+r.h); yy+=st) top.push({k:'line', pts:[[m(r.x),yy,zc],[m(r.x+r.w),yy,zc]], col:D.G?'rgba(120,130,135,.6)':'rgba(80,95,102,.75)', w:1}); }
+        }
+      });
+      if(isW && D.J) [...S.lights].forEach(p=>{ const [x,y]=p.split(',').map(Number); top.push({k:'light', p:[m(x),m(y),zc]}); });
+    }
+    if(isSel && S.phase==='end' && isW){ const w=fl.rooms.find(r=>r.wet); if(w && S.flags.mold) items.push({k:'emoji', p:[m(w.x+30),m(w.y+30),z0+1.2], ch:'🦠'}); }
+    layers.push({base, items, top, f});
+  }
+  return {layers, sel};
+}
+function draw3D(){
+  const cv=document.getElementById('cv3'); if(!cv || S.view!=='3d' || cv.offsetParent===null) return;
+  const W=cv.clientWidth, H=cv.clientHeight, dpr=Math.min(2, window.devicePixelRatio||1);
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  const bg=ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,'#2c3d46'); bg.addColorStop(1,'#151d21'); ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  const {layers, sel}=scene3D();
+  const b=floorBounds(L().work.floor), fw=m(b.x1), fh=m(b.y1);
+  const C={cx:fw/2, cy:fh/2, cz:sel*FH+1.0};
+  const span=Math.max(fw,fh)+3;
+  const k=V3.zoom*Math.min(W/(span*1.05), H/(span*0.78));
+  const cyw=Math.cos(V3.yaw), syw=Math.sin(V3.yaw), cp=Math.cos(V3.pitch), sp=Math.sin(V3.pitch);
+  const P=(p)=>{ const x=p[0]-C.cx, y=p[1]-C.cy, z=p[2]-C.cz; const x1=x*cyw-y*syw, y1=x*syw+y*cyw;
+    return [W/2+x1*k, H*0.52+(y1*sp - z*cp)*k, y1*cp + z*sp]; };
+  V3.cam={W,H,k,C,cyw,syw,cp,sp};
+  const ndepth=(n)=>{ const y1=n[0]*syw+n[1]*cyw; return y1*cp + n[2]*sp; };
+  const drawItem=(it)=>{
+    if(it.k==='poly'){ const pr=it.pts.map(P); const d=ndepth(it.n); if(d< -0.01 && it.alpha>=1) return;
+      const lit=0.62+0.38*Math.max(0, it.n[0]*LIGHT_DIR[0]+it.n[1]*LIGHT_DIR[1]+it.n[2]*LIGHT_DIR[2]);
+      ctx.beginPath(); pr.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.closePath();
+      ctx.fillStyle=shadeCol(it.col, lit, it.alpha); ctx.fill();
+      if(it.stroke){ ctx.strokeStyle='rgba(20,27,31,.22)'; ctx.lineWidth=.7; ctx.stroke(); } }
+    else if(it.k==='line'){ const pr=it.pts.map(P); ctx.beginPath(); pr.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.strokeStyle=it.col; ctx.lineWidth=it.w||1; ctx.setLineDash(it.dash||[]); ctx.stroke(); ctx.setLineDash([]); }
+    else if(it.k==='light'){ const q=P(it.p); const g=ctx.createRadialGradient(q[0],q[1],0,q[0],q[1],22); g.addColorStop(0,'rgba(255,215,106,.95)'); g.addColorStop(1,'rgba(255,215,106,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(q[0],q[1],22,0,7); ctx.fill(); ctx.fillStyle='#fff6d6'; ctx.beginPath(); ctx.arc(q[0],q[1],3.5,0,7); ctx.fill(); }
+    else if(it.k==='emoji'){ const q=P(it.p); if(it.sel){ ctx.strokeStyle='#ffc94a'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(q[0],q[1]-5,14,0,7); ctx.stroke(); } ctx.font='18px sans-serif'; ctx.textAlign='center'; ctx.fillText(it.ch,q[0],q[1]); }
+    else if(it.k==='worker'){ const bob=Math.abs(Math.sin(V3.t*7+it.ph))*0.18; const feet=P(it.p), head=P([it.p[0],it.p[1],it.p[2]+1.55+bob]), hip=P([it.p[0],it.p[1],it.p[2]+0.85+bob]);
+      ctx.fillStyle='rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(feet[0],feet[1],8,3,0,0,7); ctx.fill();
+      ctx.strokeStyle='#3a4c55'; ctx.lineWidth=Math.max(4,k*.22); ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(feet[0],feet[1]); ctx.lineTo(hip[0],hip[1]); ctx.lineTo(head[0],head[1]+k*.18); ctx.stroke();
+      const hr=Math.max(5,k*.16); ctx.fillStyle='#e2b48c'; ctx.beginPath(); ctx.arc(head[0],head[1],hr,0,7); ctx.fill(); ctx.strokeStyle='#1f2a2e'; ctx.lineWidth=1.2; ctx.stroke();
+      ctx.fillStyle=it.hat; ctx.beginPath(); ctx.arc(head[0],head[1]-hr*.15,hr*1.05,Math.PI,0); ctx.fill(); ctx.stroke(); }
+  };
+  const depthOf=(it)=>{ if(it.k==='poly'||it.k==='line'){ let s=0; it.pts.forEach(p=>s+=P(p)[2]); return s/it.pts.length; } return P(it.p)[2]+0.3; };
+  layers.forEach(Lr=>{
+    Lr.base.slice().sort((a,b)=>depthOf(a)-depthOf(b)).forEach(drawItem);
+    Lr.items.map(it=>[depthOf(it),it]).sort((a,b)=>a[0]-b[0]).forEach(([,it])=>drawItem(it));
+    Lr.top.forEach(drawItem);
+  });
+  // 座標軸
+  const z0=sel*FH, O=P([0,0,z0]);
+  const axis=(to,col,lab)=>{ const q=P(to); ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(O[0],O[1]); ctx.lineTo(q[0],q[1]); ctx.stroke();
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(q[0],q[1],3.5,0,7); ctx.fill(); ctx.font='bold 13px "Noto Sans TC",sans-serif'; ctx.textAlign='center'; ctx.fillText(lab,q[0]+(q[0]-O[0])*.08,q[1]+(q[1]-O[1])*.08-4); };
+  ctx.font='10px sans-serif'; ctx.fillStyle='rgba(255,201,74,.85)'; ctx.textAlign='center';
+  for(let i=0;i<=Math.floor(fw);i+=2){ const q=P([i,-.35,z0]); ctx.fillText(i,q[0],q[1]); }
+  for(let j=0;j<=Math.floor(fh);j+=2){ const q=P([-.4,j,z0]); ctx.fillText(j,q[0],q[1]+4); }
+  axis([3,0,z0],'#ff5a4f','X'); axis([0,3,z0],'#4cc38a','Y'); axis([0,0,z0+3],'#58a6e0','Z');
+  // 小羅盤
+  const gx=46, gy=H-46, gl=28;
+  const G=(v)=>{ const x1=v[0]*cyw-v[1]*syw, y1=v[0]*syw+v[1]*cyw; return [gx+x1*gl, gy+(y1*sp - v[2]*cp)*gl]; };
+  ctx.fillStyle='rgba(11,16,19,.6)'; ctx.beginPath(); ctx.arc(gx,gy,38,0,7); ctx.fill();
+  [[[1,0,0],'#ff5a4f','X'],[[0,1,0],'#4cc38a','Y'],[[0,0,1],'#58a6e0','Z']].forEach(([v,c,l])=>{ const q=G(v); ctx.strokeStyle=c; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(gx,gy); ctx.lineTo(q[0],q[1]); ctx.stroke(); ctx.fillStyle=c; ctx.font='bold 11px sans-serif'; ctx.fillText(l,q[0]+(q[0]-gx)*.25,q[1]+(q[1]-gy)*.25+4); });
+  ctx.fillStyle='rgba(238,242,239,.7)'; ctx.font='11px "Noto Sans TC",sans-serif'; ctx.textAlign='right';
+  ctx.fillText(`${LY().floors[sel].name}・拖曳旋轉・滾輪縮放`, W-12, H-12);
+}
+function unproject(sx,sy,zAbs){ const c=V3.cam; if(!c||c.sp<0.15) return null; const zr=zAbs-c.C.cz;
+  const x1=(sx-c.W/2)/c.k, y1=((sy-c.H*0.52)/c.k + zr*c.cp)/c.sp;
+  return [ (x1*c.cyw + y1*c.syw + c.C.cx)*40+20, (-x1*c.syw + y1*c.cyw + c.C.cy)*40+20 ]; }
+function pickFurn(sx,sy){
+  if(!S.furn) return null; const z0=S.floorView*FH; let best=null, bh=-1;
+  S.furn.filter(it=>it.f===S.floorView).forEach(it=>{
+    if(it.plant){ const p=unproject(sx,sy,z0+.6); if(p && Math.hypot(p[0]-it.x,p[1]-it.y)<18 && bh<0){ best=it; bh=0; } return; }
+    const p=unproject(sx,sy,z0+it.z+it.ht); if(!p) return;
+    if(p[0]>=it.x-6&&p[0]<=it.x+it.w+6&&p[1]>=it.y-6&&p[1]<=it.y+it.h+6 && it.ht>bh){ best=it; bh=it.ht; } });
+  return best; }
+function furnAction(a){
+  const it=S.furn&&S.furn.find(x=>x.id===V3.sel), st=STYLES[S.furniture]||STYLES['北歐'];
+  if(a==='edit'){ V3.edit=!V3.edit; V3.sel=null; V3.add=null; if(V3.edit) log('擺家具模式：拖曳家具移動、按按鈕旋轉或新增','good'); }
+  if(['plant','chair','lamp','rug'].includes(a)){ V3.add=a; log('在 3D 地板上點一下，放下新家具'); }
+  if(a==='rot' && it && !it.plant){ const cx=it.x+it.w/2, cy=it.y+it.h/2; [it.w,it.h]=[it.h,it.w]; it.x=cx-it.w/2; it.y=cy-it.h/2; }
+  if(a==='del' && it){ S.furn=S.furn.filter(x=>x!==it); V3.sel=null; }
+  Music.sfx('click'); render();
+}
+function addFurnAt(px,py){
+  const st=STYLES[S.furniture]||STYLES['北歐'], f=S.floorView, id='u'+(FID++);
+  const spec={plant:{plant:true,ch:'🪴'}, chair:{w:24,h:24,ht:.8,col:st.accent}, lamp:{w:12,h:12,ht:1.6,col:'#d9c27a'}, rug:{w:72,h:48,ht:.02,col:st.rug}}[V3.add];
+  const it={id,key:'user',f,z:0,...spec}; if(it.plant){ it.x=px; it.y=py; } else { it.x=px-it.w/2; it.y=py-it.h/2; }
+  S.furn.push(it); V3.sel=id; V3.add=null; Music.sfx('pop'); render();
+}
+function init3DControls(cv){
+  const pts=new Map(); let last=null, pinch=null, dragF=null;
+  const loc=e=>{ const r=cv.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; };
+  cv.addEventListener('pointerdown',e=>{ cv.setPointerCapture(e.pointerId);
+    if(V3.edit && S.furn && pts.size===0){ const [sx,sy]=loc(e);
+      if(V3.add){ const p=unproject(sx,sy,S.floorView*FH); if(p){ addFurnAt(p[0],p[1]); } return; }
+      const it=pickFurn(sx,sy);
+      if(it){ V3.sel=it.id; const zb=S.floorView*FH+(it.z||0); const p=unproject(sx,sy,zb)||[0,0];
+        const cx=it.plant?it.x:it.x+it.w/2, cy=it.plant?it.y:it.y+it.h/2; dragF={it, off:[cx-p[0], cy-p[1]], zb}; render(); return; }
+      else if(V3.sel){ V3.sel=null; render(); } }
+    pts.set(e.pointerId,[e.clientX,e.clientY]); last=[e.clientX,e.clientY]; if(pts.size===2){ const [a,b]=[...pts.values()]; pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]), z:V3.zoom}; } });
+  cv.addEventListener('pointermove',e=>{
+    if(dragF){ const [sx,sy]=loc(e), p=unproject(sx,sy,dragF.zb); if(!p) return; const it=dragF.it, b=floorBounds(it.f);
+      const cx=clamp(p[0]+dragF.off[0],20,b.x1), cy=clamp(p[1]+dragF.off[1],20,b.y1);
+      if(it.plant){ it.x=cx; it.y=cy; } else { it.x=clamp(cx-it.w/2,20,b.x1-it.w); it.y=clamp(cy-it.h/2,20,b.y1-it.h); }
+      draw3D(); return; }
+    if(!pts.has(e.pointerId)) return; pts.set(e.pointerId,[e.clientX,e.clientY]);
+    if(pts.size===2 && pinch){ const [a,b]=[...pts.values()]; V3.zoom=clamp(pinch.z*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch.d,.5,3); draw3D(); return; }
+    const dx=e.clientX-last[0], dy=e.clientY-last[1]; last=[e.clientX,e.clientY];
+    V3.yaw-=dx*0.01; V3.pitch=clamp(V3.pitch+dy*0.008,0.12,1.55); draw3D(); });
+  const up=e=>{ if(dragF){ dragF=null; render(); } pts.delete(e.pointerId); if(pts.size<2) pinch=null; };
+  cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
+  cv.addEventListener('wheel',e=>{ e.preventDefault(); V3.zoom=clamp(V3.zoom*(e.deltaY>0?.9:1.1),.5,3); draw3D(); },{passive:false});
+  cv.addEventListener('dblclick',()=>{ if(V3.edit) return; V3.yaw=-0.6; V3.pitch=0.82; V3.zoom=1; draw3D(); });
+  window.addEventListener('resize',()=>draw3D());
+}
+
+/* =========================================================
+   畫面
+   ========================================================= */
+function satFace(v){ return v>=85?'😄':v>=70?'🙂':v>=55?'😐':v>=40?'😟':'😡'; }
+function cardHTML(t, cls, lockmsg){
+  const L_=LOOK[t.id];
+  return `<button class="gcard ${cls} ${t.optional?'optional':''}" data-t="${t.id}" ${cls.includes('lock')?'disabled':''}>
+      <div class="band" style="background:${L_.band}">${L_.cat}</div>
+      <div class="ic">${L_.ic}</div><div class="nm">${t.name}</div><div class="ds">${t.desc}</div>
+      <div class="ft"><span>⏱ ${adjDays(t.id,t.days)}天</span><span>💰 ${t.cost?(adjCost(t.id,t.cost)/1000).toFixed(0)+'k':'選材'}</span></div>
+      ${lockmsg?`<div class="lockmsg">🔒 ${lockmsg}</div>`:''}
+    </button>`;
+}
+function updateMusic(){
+  if(document.getElementById('screenRoot').innerHTML){ if(Music.mode!==null || !Music._jt) Music.setMode('menu'); return; }
+  if(['play','plan','run','ending'].includes(S.phase)){
+    const tense = (S.day>=S.deadline*0.85 && !S.done.K) || S.sat<45 || (S.received-S.spent)<-50000;
+    Music.setMode(tense?'tense':'work');
+  } else Music.setMode('menu');
+}
+function render(){
+  const lv=L(), cash=S.received-S.spent, late=S.day>S.deadline, dayPct=clamp(S.day/S.deadline*100,0,100), floors=LY().floors;
+  document.getElementById('hud').innerHTML=`
+    <div class="level"><div class="badge">${LV_NO[S.lv]}</div><div><b>${lv.name}</b><small>${lv.place}</small>${S.crew?`<small class="crewchip">👷 ${CREWS[S.crew].name}・${CREWS[S.crew].tag}</small>`:''}</div></div>
+    <div class="res ${cash<0?'warn':''}" data-res="m"><div class="ico">💰</div><div class="grow"><div class="lab">現金（已收−已花）</div><div class="val">${fmt(cash)}</div><div class="sub">合約 ${fmt(S.revenue)}・已收 ${fmt(S.received)}</div></div></div>
+    <div class="res ${late?'warn':''}" data-res="d"><div class="ico">⏱</div><div class="grow"><div class="lab">工期</div><div class="val">第 ${S.day} 天 <span style="font-size:12px;color:var(--muted)">/ ${S.deadline}</span></div><div class="meter"><i style="width:${dayPct}%;background:${late?'var(--bad)':dayPct>80?'var(--gold)':'var(--blue)'}"></i></div></div></div>
+    <div class="res" data-res="q"><div class="ico">⭐</div><div class="grow"><div class="lab">施工品質</div><div class="val">${S.quality}</div><div class="meter"><i style="width:${S.quality}%;background:${S.quality<70?'var(--bad)':'var(--good)'}"></i></div></div></div>
+    <div class="res" data-res="s"><div class="ico">${satFace(S.sat)}</div><div class="grow"><div class="lab">業主滿意度 ${'😈'.repeat(lv.picky)}</div><div class="val">${S.sat}</div><div class="meter"><i style="width:${S.sat}%;background:${S.sat<60?'var(--bad)':'var(--gold)'}"></i></div></div></div>
+    <button class="res sound" id="sndBtn" title="背景音樂">${PROG.mute?'🔇':'🔊'}</button>`;
+  document.getElementById('sndBtn').onclick=()=>{ Music.init(); Music.toggle(); render(); };
+  // 視圖
+  const forced2d = !!S.mode;
+  if(forced2d) S.floorView=lv.work.floor;
+  const view = forced2d ? '2d' : S.view;
+  const b2=document.getElementById('b2d'), b3=document.getElementById('b3d');
+  b2.style.display = view==='2d'?'block':'none'; b3.style.display = view==='3d'?'block':'none';
+  if(view==='2d') b2.innerHTML=planSVG(S.floorView);
+  const vbtns=document.getElementById('viewBtns');
+  vbtns.innerHTML = `<button class="pill dwgbtn" id="dwgBtn" ${S.phase==='intro'?'style="visibility:hidden"':''}>📜 施工圖</button>
+    ${forced2d?'':`<button class="pill on" id="viewBtn">${S.view==='3d'?'🧊 3D':'🗺 平面'}</button>`}
+    ${floors.length>1&&!forced2d?floors.map((f,i)=>`<button class="pill ${S.floorView===i?'on':''} ${i===lv.work.floor?'workf':''}" data-fl="${i}">${f.name}${i===lv.work.floor?' 🔨':''}</button>`).join(''):''}
+    <button class="pill" id="helpBtn">❓ 說明</button>
+    <button class="pill exitbtn" id="exitBtn">🚪 離開</button>
+    <button class="pill ${S.showCeil?'on':''}" id="ceilBtn">天花板 ${S.showCeil?'ON':'OFF'}</button>
+    ${view==='3d'&&S.furn?`<button class="pill ${V3.edit?'on workf':''}" data-fa="edit">🛋 擺家具 ${V3.edit?'ON':'OFF'}</button>`:''}
+    ${view==='3d'?`<button class="pill ${V3.cut?'on':''}" id="cutBtn">牆 ${V3.cut?'半剖':'全高'}</button><button class="pill" id="camBtn">🎯 視角</button>`:''}`;
+  const on=(id,fn)=>{ const e=document.getElementById(id); if(e) e.onclick=fn; };
+  on('dwgBtn',()=>openDrawings());
+  on('helpBtn',showHelp);
+  on('exitBtn',askExit);
+  on('viewBtn',()=>{ S.view=S.view==='3d'?'2d':'3d'; render(); });
+  on('ceilBtn',()=>{ S.showCeil=!S.showCeil; render(); });
+  on('cutBtn',()=>{ V3.cut=!V3.cut; render(); });
+  on('camBtn',()=>{ if(V3.pitch>1.3){ V3.yaw=-0.6; V3.pitch=0.82; } else { V3.yaw=0; V3.pitch=1.5; } V3.zoom=1; draw3D(); });
+  vbtns.querySelectorAll('[data-fa]').forEach(bt=>bt.onclick=()=>furnAction(bt.dataset.fa));
+  const fb=document.getElementById('furnBar');
+  if(view==='3d' && V3.edit && S.furn){ fb.classList.remove('hidden'); fb.innerHTML=`<span>🛋 擺家具：拖曳家具移動${V3.add?'・<b>在地板上點一下放置</b>':''}</span><button class="pill" data-fa="plant">＋盆栽</button><button class="pill" data-fa="chair">＋單椅</button><button class="pill" data-fa="lamp">＋立燈</button><button class="pill" data-fa="rug">＋地毯</button><button class="pill" data-fa="rot" ${V3.sel?'':'disabled'}>↻ 旋轉</button><button class="pill" data-fa="del" ${V3.sel?'':'disabled'}>🗑 移除</button>`; fb.querySelectorAll('[data-fa]').forEach(bt=>bt.onclick=()=>furnAction(bt.dataset.fa)); } else fb.classList.add('hidden');
+  vbtns.querySelectorAll('[data-fl]').forEach(bt=>bt.onclick=()=>{ S.floorView=+bt.dataset.fl; render(); });
+  if(view==='3d') draw3D();
+  const fresh=S.log.length!==lastLog; lastLog=S.log.length;
+  document.getElementById('ticker').innerHTML=S.log.slice(0,3).map((l,i)=>`<div class="${l.kind} ${fresh&&i===0?'new':''}"><em>D${l.d}</em>${l.msg}</div>`).join('');
+  const showMaster = S.phase==='play' && !S.mode;
+  document.getElementById('masterBtn').style.visibility = showMaster ? 'visible':'hidden';
+  document.getElementById('masterLbl').textContent = lv.mode==='schedule' ? `問下一步（剩 ${Math.max(0,(lv.hintMax||0)-S.hints)} 次）` : lv.hintCost ? `問老師傅 NT$${lv.hintCost.toLocaleString()}` : '問老師傅';
+  renderTray();
+  updateMusic();
+}
+function renderTray(){
+  const lv=L(), tray=document.getElementById('tray'); const popId=S.justDone; S.justDone=null;
+  const TT=curTasks();
+  const slots=TT.map((_,i)=>{ const id=S.order[i]; return id?`<div class="slot f ${id===popId?'new':''}" title="${T[id].name}">${LOOK[id].ic}</div>`:`<div class="slot"></div>`; }).join('');
+  const track=`<div class="track"><span class="lab">施工進度 ${S.order.length}/${TT.length}</span><div class="slots">${slots}</div></div>`;
+  if(S.mode==='wall'){
+    tray.innerHTML=track+`<div class="wallbar"><div class="t">📐 <b>輕隔間放樣（${WF().name}）</b>：照 <b>A-01 平面配置圖</b> 的尺寸，點格線附近會自動吸附，<b>按住拖曳可以一次畫一整段</b>（一格 = 1 公尺）。共要隔 <b>${S.newRooms.length}</b> 間，門洞位置也要照圖留。${has('laser')?'<br>🔴 雷射水平儀已打出一道參考線。':''}<br>已放置 <b>${S.walls.size}</b> 段</div>
+      <button class="btn sec" id="seeW">📜 看施工圖</button><button class="btn sec" id="undoBtn" ${S.hist.length?'':'disabled'}>↶ 復原</button><button class="btn sec" id="clearW">清除重畫</button><button class="btn" id="okW" ${S.walls.size?'':'disabled'}>確認放樣</button></div>`;
+    tray.querySelector('#seeW').onclick=()=>openDrawings('A01');
+    tray.querySelector('#clearW').onclick=()=>{S.hist.push(new Set(S.walls)); S.walls=new Set(); render();}; tray.querySelector('#undoBtn').onclick=undoPlace;
+    tray.querySelector('#okW').onclick=confirmWalls;
+    return;
+  }
+  if(S.mode==='lights'){
+    tray.innerHTML=track+`<div class="wallbar"><div class="t">💡 <b>崁燈放樣（${WF().name}）</b>：照 <b>A-02 天花板配置圖</b>，在天花板上點出要開孔的燈位（再點一次取消）。<br>已放置 <b>${S.lights.size}</b> 盞</div>
+      <button class="btn sec" id="seeL">📜 看施工圖</button><button class="btn sec" id="undoBtn" ${S.hist.length?'':'disabled'}>↶ 復原</button><button class="btn sec" id="clearL">清除重來</button><button class="btn" id="okL" ${S.lights.size?'':'disabled'}>確認開孔</button></div>`;
+    tray.querySelector('#seeL').onclick=()=>openDrawings('A02');
+    tray.querySelector('#clearL').onclick=()=>{S.hist.push(new Set(S.lights)); S.lights=new Set(); render();}; tray.querySelector('#undoBtn').onclick=undoPlace;
+    tray.querySelector('#okL').onclick=confirmLights;
+    return;
+  }
+  if(S.mode==='inspect'){
+    const n=S.defects.filter(d=>d.found).length;
+    tray.innerHTML=track+mechBar()+`<div class="wallbar"><div class="t">🔍 <b>交屋點交</b>：仔細看平面圖，點出建商留下的瑕疵（牆面裂縫、天花板水漬、地面空心）。找到 <b>${n}</b>／3 個。</div>
+      <button class="btn" id="okI">點交完成，開始施工</button></div>`;
+    tray.querySelector('#okI').onclick=confirmInspect;
+    return;
+  }
+  if(S.mode==='demo'){
+    const n=S.demoSel.size;
+    tray.innerHTML=track+`<div class="wallbar"><div class="t">🔨 <b>拆除放樣（${WF().name}）</b>：照 <b>D-01 拆除平面圖</b>，在平面圖上點選要拆除的東西（再點一次取消）。<b>標示「保留」的設備拆了要賠！</b><br>已標記 <b>${n}</b> 項要拆</div>
+      <button class="btn sec" id="seeD">📜 看施工圖</button><button class="btn sec" id="undoBtn" ${S.hist.length?'':'disabled'}>↶ 復原</button><button class="btn sec" id="clearD">清除重來</button><button class="btn" id="okD">確認拆除範圍</button></div>`;
+    tray.querySelector('#seeD').onclick=()=>openDrawings('D01');
+    tray.querySelector('#clearD').onclick=()=>{S.hist.push(new Set(S.demoSel)); S.demoSel=new Set(); render();}; tray.querySelector('#undoBtn').onclick=undoPlace;
+    tray.querySelector('#okD').onclick=confirmDemo;
+    return;
+  }
+  if(S.mode==='wiring'){
+    tray.innerHTML=track+`<div class="wallbar"><div class="t">⚡ <b>水電插座放樣（${WF().name}）</b>：照 <b>E-01 水電配置圖</b>，在牆面格線中點點出插座位置（再點一次取消）。<br>已放置 <b>${S.plugSel.size}</b> 個插座</div>
+      <button class="btn sec" id="seeE">📜 看施工圖</button><button class="btn sec" id="undoBtn" ${S.hist.length?'':'disabled'}>↶ 復原</button><button class="btn sec" id="clearE">清除重來</button><button class="btn" id="okE" ${S.plugSel.size?'':'disabled'}>確認配管</button></div>`;
+    tray.querySelector('#seeE').onclick=()=>openDrawings('E01');
+    tray.querySelector('#clearE').onclick=()=>{S.hist.push(new Set(S.plugSel)); S.plugSel=new Set(); render();}; tray.querySelector('#undoBtn').onclick=undoPlace;
+    tray.querySelector('#okE').onclick=confirmWiring;
+    return;
+  }
+  if(S.phase==='end' && !document.getElementById('screenRoot').innerHTML){
+    const hasNext=S.lv<LEVELS.length-1, canNext=hasNext&&(S.pass||PROG.all);
+    tray.innerHTML=track+`<div class="wallbar"><div class="t">🏁 <b>${LV_NO[S.lv]}「${L().name}」已交屋</b>・評等 <b style="font-size:20px">${S.grade}</b><br>可以旋轉 3D 看完成的房子；切到平面圖點房間，可以換家具擺法。</div>
+      ${canNext?'<button class="btn" id="eNext">下一關 ▶</button>':''}<button class="btn sec" id="eRes">再看結算</button><button class="btn sec" id="eAgain">重玩本關</button><button class="btn sec" id="eShop">🧰 工具倉庫</button><button class="btn sec" id="eMenu">關卡選單</button></div>`;
+    const on=(id,fn)=>{ const e=tray.querySelector('#'+id); if(e) e.onclick=fn; };
+    on('eNext',()=>startLevel(S.lv+1)); on('eRes',showResult); on('eAgain',()=>startLevel(S.lv)); on('eShop',()=>shopScreen(levelSelect)); on('eMenu',levelSelect);
+    return;
+  }
+  const sched = lv.mode==='schedule';
+  const cards=S.cardOrder.map(id=>T[id]).filter(t=>!S.done[t.id] && !(t.id==='A'&&S.done.B)).map(t=>{
+    const need=needsOf(t);
+    const can=(sched || !need.length) && S.phase==='play' && !S.busy;
+    const lockmsg = !sched && need.length&&S.phase==='play' ? (t.final?`還剩 ${need.length} 項`:`需先：${need.map(n=>T[n].name).join('、')}`) : '';
+    return {can, html:cardHTML(t, can?'ok':'lock', lockmsg)};
+  });
+  if(!sched) cards.sort((a,b)=>b.can-a.can);
+  const head = sched && S.phase==='play' ? `<div class="schedhint">🗓 自己決定下一個進場的工班：前置工作沒做會白跑，順序錯了會返工。已白跑 <b>${S.idle}</b> 次・返工 <b>${S.reworks}</b> 次</div>` : '';
+  tray.innerHTML=track+mechBar()+head+`<div class="hand">${cards.map(c=>c.html).join('') || '<div style="padding:24px 10px;display:flex;align-items:center;gap:16px"><b style="font-size:17px">🏁 全部完工！</b><button class="btn" id="replayBtn">關卡選單</button></div>'}</div>`;
+  tray.querySelectorAll('.gcard.ok').forEach(bt=>bt.onclick=()=>playCard(bt.dataset.t,bt));
+  const rb=tray.querySelector('#replayBtn'); if(rb) rb.onclick=levelSelect;
+  tray.querySelectorAll('[data-mact]').forEach(bt=>bt.onclick=()=>mechAction(bt.dataset.mact));
+}
+
+/* ---------- 首頁、關卡、工具倉庫 ---------- */
+function titleScreen(){
+  document.getElementById('screenRoot').innerHTML = `<div class="screen"><div class="title">
+    <div class="deco">🔨📐🎨</div>
+    <div class="kicker">RENOVATION SIMULATOR</div>
+    <h1>裝修模擬器</h1>
+    <h2>照圖施工・排好工序・準時交屋</h2>
+    <button class="btn" id="startBtn">開始遊戲</button>
+    <p class="disc titledisc">※ ${DISCLAIMER}</p>
+    <div class="copyright">© ${new Date().getFullYear()} <b>格睿室內裝修</b> 版權所有・All Rights Reserved</div>
+  </div></div>`;
+  document.getElementById('startBtn').onclick=()=>{ Music.init(); Music.setMode('menu'); Music.sfx('click'); levelSelect(); };
+  Music.setMode('menu');
+}
+function levelSelect(){
+  const R=document.getElementById('screenRoot');
+  Music.setMode('menu');
+  R.innerHTML=`<div class="screen"><div class="lvwrap">
+    <div class="lvhead"><div><button class="linkbtn backhome" id="homeBtn">◀ 回首頁</button><br><span class="kicker">選擇關卡</span><div class="cashline">🏢 公司資金 <b>${fmt(PROG.cash)}</b>・工具 ${Object.keys(PROG.tools).length}/${TOOLS.length}</div></div>
+      <div style="display:flex;gap:8px"><button class="btn sec" id="shopBtn">🧰 工具倉庫</button><button class="btn sec" id="sndBtn2">${PROG.mute?'🔇':'🔊'}</button></div></div>
+    <div class="lvgrid">${LEVELS.map((lv,i)=>{ const ok=unlocked(i), best=PROG.best[i];
+      return `<button class="lvcard ${ok?'ok':'lock'}" data-lv="${i}" ${ok?'':'disabled'}>
+        ${best?`<span class="best">${best}</span>`:''}
+        <div class="no">${LV_NO[i]}</div><h3>${lv.name}</h3><div class="pl">${lv.place}</div>
+        <div class="tags"><span class="tag ${lv.mode==='schedule'?'hard':''}">${lv.mode==='schedule'?'🗓 自己排工序':'🔒 工序提示'}</span>
+          <span class="tag">🏠 ${LAYOUTS[lv.layout].floors.length} 層・${LAYOUTS[lv.layout].floors[lv.work.floor].name}</span>
+          <span class="tag mt">${MECH[i].ic} ${MECH[i].name}</span><span class="tag">⏱ ${lv.deadline} 天</span>
+          <span class="tag">${PICKY[lv.picky]}</span><span class="tag ${lv.payer>=2?'hard':''}">💸 ${PAYER[lv.payer]}</span></div>
+        <div class="stars">${'★'.repeat(Math.ceil((i+1)/2))}${'☆'.repeat(5-Math.ceil((i+1)/2))}</div>
+        ${ok?'':'<div class="pl" style="margin-top:6px">🔒 過前一關（C 以上）解鎖</div>'}
+      </button>`; }).join('')}</div>
+    <div class="lvfoot"><button class="linkbtn" id="unlockAll">${PROG.all?'已解鎖全部關卡（試玩模式）':'試玩模式：解鎖全部關卡'}</button><button class="linkbtn" id="resetCareer">重新開始（清除存檔）</button></div>
+    <p class="disc">※ ${DISCLAIMER}</p>
+    <div class="copyright">© ${new Date().getFullYear()} 格睿室內裝修 版權所有</div>
+  </div></div>`;
+  R.querySelectorAll('.lvcard.ok').forEach(bt=>bt.onclick=()=>{ Music.sfx('click'); startLevel(+bt.dataset.lv); });
+  R.querySelector('#unlockAll').onclick=()=>{ PROG.all=true; saveProg(); levelSelect(); };
+  R.querySelector('#resetCareer').onclick=()=>{ PROG={cash:150000, tools:{}, best:{}, all:false, mute:PROG.mute}; saveProg(); levelSelect(); };
+  R.querySelector('#shopBtn').onclick=()=>shopScreen(levelSelect);
+  R.querySelector('#homeBtn').onclick=titleScreen;
+  R.querySelector('#sndBtn2').onclick=()=>{ Music.init(); Music.toggle(); levelSelect(); };
+}
+function shopScreen(back){
+  const R=document.getElementById('screenRoot');
+  R.innerHTML=`<div class="screen"><div class="lvwrap">
+    <div class="lvhead"><div><span class="kicker">🧰 工具倉庫</span><div class="cashline">🏢 公司資金 <b>${fmt(PROG.cash)}</b>（每關利潤會存進來）</div></div><button class="btn" id="backBtn">◀ 返回</button></div>
+    <div class="shopgrid">${TOOLS.map(t=>{ const own=has(t.id), can=PROG.cash>=t.price;
+      return `<div class="tool ${own?'own':''}"><div class="tic">${t.ic}</div><h3>${t.name}</h3><p>${t.desc}</p>
+        <div class="tfoot"><b>${fmt(t.price)}</b>${own?'<span class="ownb">✅ 已擁有</span>':`<button class="btn ${can?'':'sec'}" data-buy="${t.id}" ${can?'':'disabled'}>${can?'購買':'資金不足'}</button>`}</div></div>`; }).join('')}</div>
+    <p class="disc">※ ${DISCLAIMER}</p>
+  </div></div>`;
+  R.querySelector('#backBtn').onclick=back;
+  R.querySelectorAll('[data-buy]').forEach(bt=>bt.onclick=()=>{ const t=TOOLS.find(x=>x.id===bt.dataset.buy); if(PROG.cash<t.price) return; PROG.cash-=t.price; PROG.tools[t.id]=true; saveProg(); Music.sfx('cash'); shopScreen(back); });
+}
+
+/* ---------- 綁定與啟動 ---------- */
+/* 放樣：點附近自動吸附、拖曳連續畫牆、預覽 */
+const placeSet = () => S.mode==='wall'?S.walls : S.mode==='lights'?S.lights : S.mode==='wiring'?S.plugSel : S.demoSel;
+function undoPlace(){ const prev=S.hist.pop(); if(!prev) return;
+  if(S.mode==='wall') S.walls=prev; else if(S.mode==='lights') S.lights=prev; else if(S.mode==='wiring') S.plugSel=prev; else if(S.mode==='demo') S.demoSel=prev; render(); }
+(function(){
+  const box=document.getElementById('b2d'); let drag=null;
+  const pt=e=>{ const svg=box.querySelector('svg'); if(!svg) return null; const m=svg.getScreenCTM(); if(!m) return null; const p=svg.createSVGPoint(); p.x=e.clientX; p.y=e.clientY; const q=p.matrixTransform(m.inverse()); return [q.x,q.y]; };
+  const segDist=(p,[x1,y1,x2,y2])=>{ const dx=x2-x1, dy=y2-y1, t=clamp(((p[0]-x1)*dx+(p[1]-y1)*dy)/(dx*dx+dy*dy),0,1); return Math.hypot(p[0]-(x1+t*dx), p[1]-(y1+t*dy)); };
+  function nearest(p){
+    if(S.mode==='wall'){ const g=gridIdx(); let best=null, bd=16;
+      for(let j=g.j0+1;j<g.j1;j++) for(let i=g.i0;i<g.i1;i++){ const k=`h${i}_${j}`, d=segDist(p,edgeXY(k)); if(d<bd){bd=d;best=k;} }
+      for(let i=g.i0+1;i<g.i1;i++) for(let j=g.j0;j<g.j1;j++){ const k=`v${i}_${j}`, d=segDist(p,edgeXY(k)); if(d<bd){bd=d;best=k;} }
+      return best; }
+    if(S.mode==='lights'){ let best=null, bd=24; lightSpots().forEach(k=>{ const [x,y]=k.split(',').map(Number), d=Math.hypot(p[0]-x,p[1]-y); if(d<bd){bd=d;best=k;} }); return best; }
+    if(S.mode==='wiring'){ let best=null, bd=18; edgeSpots().forEach(k=>{ const [x,y]=edgeMid(k), d=Math.hypot(p[0]-x,p[1]-y); if(d<bd){bd=d;best=k;} }); return best; }
+    if(S.mode==='demo'){ const it=S.demoItems.find(d=>{ const [x,y,w,h]=d.rect; return p[0]>=x-6&&p[0]<=x+w+6&&p[1]>=y-6&&p[1]<=y+h+6; }); return it?it.id:null; }
+    return null; }
+  function ghost(k){ const g=box.querySelector('#ghost'); if(!g) return; if(!k){ g.innerHTML=''; return; }
+    if(S.mode==='wall'){ const [a,b,c,d]=edgeXY(k); g.innerHTML=`<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="#ffc94a" stroke-width="12" opacity=".5" stroke-linecap="round"/>`; }
+    else if(S.mode==='lights'){ const [x,y]=k.split(',').map(Number); g.innerHTML=`<circle cx="${x}" cy="${y}" r="13" fill="none" stroke="#ffc94a" stroke-width="3"/>`; }
+    else if(S.mode==='wiring'){ const [x,y]=edgeMid(k); g.innerHTML=`<circle cx="${x}" cy="${y}" r="11" fill="none" stroke="#ffc94a" stroke-width="3"/>`; }
+    else { const d=S.demoItems.find(x=>x.id===k); const [x,y,w,h]=d.rect; g.innerHTML=`<rect x="${x-6}" y="${y-6}" width="${w+12}" height="${h+12}" rx="6" fill="none" stroke="#ffc94a" stroke-width="3"/>`; } }
+  box.addEventListener('pointerdown',e=>{
+    const p=pt(e); if(!p) return;
+    if(S.mode==='inspect'){ const d=S.defects.find(d=>!d.found && Math.hypot(d.x-p[0],d.y-p[1])<26); if(d){ d.found=true; Music.sfx('ding'); log(`找到建商瑕疵：${d.room}${d.label}`,'good'); } else Music.sfx('click'); render(); return; }
+    if(!S.mode){
+      if(S.furn && S.view==='2d'){ const R=furnRooms().find(R=>R.f===S.floorView && p[0]>=R.x&&p[0]<=R.x+R.w&&p[1]>=R.y&&p[1]<=R.y+R.h); if(R){ S.fvar[R.key]=((S.fvar[R.key]||0)+1)%4; S.furn=S.furn.filter(it=>it.key!==R.key).concat(genRoom(R)); Music.sfx('click'); render(); } }
+      return; }
+    const k=nearest(p); if(!k) return;
+    const set=placeSet(); S.hist.push(new Set(set));
+    const on=!set.has(k); on?set.add(k):set.delete(k); Music.sfx('click');
+    drag = S.mode==='wall' ? {on, last:k} : null;
+    if(drag){ try{ box.setPointerCapture(e.pointerId); }catch(err){} }
+    render(); ghost(k);
+  });
+  box.addEventListener('pointermove',e=>{ if(!S.mode) return; const p=pt(e); if(!p) return; const k=nearest(p);
+    if(drag && k && k!==drag.last){ drag.last=k; drag.on?S.walls.add(k):S.walls.delete(k); render(); }
+    ghost(k); });
+  const end=()=>{ drag=null; };
+  box.addEventListener('pointerup',end); box.addEventListener('pointercancel',end); box.addEventListener('pointerleave',()=>ghost(null));
+})();
+document.getElementById('masterBtn').onclick=hint;
+document.getElementById('masterAv').innerHTML=`<span style="display:block;width:40px;height:40px;border-radius:50%;overflow:hidden;border:2px solid var(--edge)">${spkHTML('master')}</span>`;
+init3DControls(document.getElementById('cv3'));
+S=newState(0); setupLevel(); render(); titleScreen();
+
+</script>
+</body>
+</html>
